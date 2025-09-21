@@ -1,0 +1,13 @@
+go 1.23.4
+
+use (
+	.
+	./../SumoConfig
+	./../config
+	./../logger
+	./../middleware
+	./../models
+	./../typeDef
+	./../utils
+	./handlers
+)

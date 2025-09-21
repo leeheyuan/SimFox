@@ -1,0 +1,256 @@
+definitions:
+  handlers.CreateTenantUserRequest:
+    properties:
+      password:
+        type: string
+      tenant_name:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - tenant_name
+    - username
+    type: object
+  handlers.RegisterRequest:
+    properties:
+      password:
+        example: "123456"
+        type: string
+      username:
+        example: liheyuan
+        type: string
+    type: object
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Saas仿真平台RESTful.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Simulation platform  API
+  version: "1.0"
+paths:
+  /create-tenant-user:
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的租户，并为其创建一个管理员用户
+      parameters:
+      - description: 租户与管理员信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateTenantUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"token": "jwt_token"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 创建租户和管理员用户
+      tags:
+      - 用户
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: 用户通过用户名和密码进行登录，成功后返回 JWT Token
+      parameters:
+      - description: 登录请求体
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"token": "jwt_token"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: '{"error": "Invalid request"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: '{"error": "Invalid credentials"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: '{"error": "Could not generate token"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用户登录
+      tags:
+      - 用户认证
+  /overview:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取用户首页信息
+      tags:
+      - 用户
+  /project/generate:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 生成一个仿真项目，包含参数和上传文件
+      parameters:
+      - description: 项目名称
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: 仿真时长
+        in: formData
+        name: simulationTime
+        required: true
+        type: integer
+      - description: 是否立即运行
+        in: formData
+        name: isNowRun
+        required: true
+        type: boolean
+      - description: 路网文件
+        in: formData
+        name: netFile
+        type: file
+      - description: 路线文件
+        in: formData
+        name: routeFIle
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 生成成功提示
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 项目生成
+      tags:
+      - 项目
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: 注册一个新用户，提供用户名和密码
+      parameters:
+      - description: 注册请求体
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功提示
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 用户名已存在
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 用户注册
+      tags:
+      - 用户
+  /uploadmap:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 生成项目配置文件
+      parameters:
+      - description: 路网文件
+        in: formData
+        name: netFile
+        type: file
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: 路网文件保存成功
+          schema:
+            type: string
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "500":
+          description: 服务器内部错误
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 生成项目配置文件
+      tags:
+      - 文件上传
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

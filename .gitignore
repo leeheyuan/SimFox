@@ -1,0 +1,4 @@
+user_auth/SimulationConfig/
+*.exe
+config_Sever/config_Sever
+sim_server/node_modules/

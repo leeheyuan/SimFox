@@ -1,0 +1,104 @@
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Saas仿真平台RESTful.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Simulation platform  API
+  version: "1.0"
+paths:
+  /SimulationConfig/{filename}:
+    get:
+      consumes:
+      - application/json
+      description: 根据文件名从 files 目录中下载指定仿真配置文件
+      parameters:
+      - description: 文件名
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "500":
+          description: 内部错误
+          schema:
+            type: string
+      summary: 下载仿真配置文件
+      tags:
+      - SimulationConfig
+  /getGeojson:
+    get:
+      description: 获取路网文件的Geojson数据
+      parameters:
+      - default: http://localhost:8081/SimulationConfig/j_lI-
+        description: 仿真器索引
+        in: query
+        name: netfile
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: geojson转换成功
+          schema:
+            type: string
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "500":
+          description: 服务器内部错误
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取路网文件的Geojson数据
+      tags:
+      - Geojson
+  /uploadmap:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 生成项目配置文件
+      parameters:
+      - description: 路网文件
+        in: formData
+        name: netFile
+        type: file
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: 路网文件保存成功
+          schema:
+            type: string
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "500":
+          description: 服务器内部错误
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 生成项目配置文件
+      tags:
+      - 文件上传
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

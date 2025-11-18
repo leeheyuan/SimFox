@@ -10,13 +10,10 @@ async def run_simulation(config, duration, speed, queue,prot):
     last_veh_ids = set() 
     for t in range(steps):
         traci.simulationStep()
-        veh_ids = traci.vehicle.getIDList()
-
+        veh_ids = traci.vehicle.getIDList() 
         add_vehicles = []
         remove_vehicles = []
-        vehicles = []   
-        
-         
+        vehicles = []    
          # 比较新增车辆和移除车辆
        # 计算新增和移除车辆
         added_vehicles = set(veh_ids) - last_veh_ids  # 新增的车辆

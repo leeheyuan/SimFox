@@ -39,6 +39,8 @@ sudo docker run -d \
   -e MYSQL_ALLOW_EMPTY_PASSWORD=no \
   mysql:latest
 
+
+
 -- 1）创建用户（'%' 表示任意主机都可连）
 CREATE USER 'gogs'@'%' IDENTIFIED BY 'AppPass!23';
 
@@ -69,3 +71,10 @@ Environment=USER=liheyuan HOME=/opt/gogs/gogs
 [Install]
 WantedBy=multi-user.target
 EOF
+
+
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '新密码_一定要复杂';
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'sdahfjksahf897897hajkhdjsakdhahueu';
+ALTER USER 'root'@'%' IDENTIFIED BY 'sdahfjksahf897897hajkhdjsakdhahueu';
+FLUSH PRIVILEGES;
+EXIT;

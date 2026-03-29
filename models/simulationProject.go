@@ -14,3 +14,12 @@ type SimulationProject struct {
 	UpdateAt    time.Time
 	Tenant      Tenant `gorm:"foreignKey:TenantID"`
 }
+
+
+
+type SimulationProjectToWeb struct {
+	ID        uint      `json:"id"`
+	Name      string    `json:"name"`
+	Status    string    `json:"status"`
+	UpdateAt  time.Time `json:"updated"`
+}

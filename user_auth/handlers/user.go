@@ -165,6 +165,7 @@ func GetUserOverview(c *gin.Context) {
 	var simulationCount int64
 	var mapCount int64
 	var recentProjects []models.SimulationProject
+	var recentProjectsToWebs []models.SimulationProjectToWeb
 
 	var user models.User
 	if err := config.DB.Where("username = ?", username).First(&user).Error; err != nil {
@@ -176,16 +177,25 @@ func GetUserOverview(c *gin.Context) {
 	config.DB.Model(&models.MapData{}).Where("tenant_id = ?", user.ID).Count(&mapCount)
 	// 查询最近打开的项目，按更新时间倒序取前 5 个
 	config.DB.Where("tenant_id = ?", user.ID).
-		Order("updated_at desc").
+		Order("update_at desc").
 		Limit(5).
 		Find(&recentProjects)
+
+		for _, project := range recentProjects {
+			recentProjectsToWebs = append(recentProjectsToWebs, models.SimulationProjectToWeb{
+				ID:       project.ID,	
+				Name:     project.Name,
+				Status:   project.Status,
+				UpdateAt: project.UpdateAt,
+			})
+		}	
 
 	// 返回 JSON 响应
 	c.JSON(http.StatusOK, gin.H{
 		"project_count":    projectCount,
 		"simulation_count": simulationCount,
 		"map_count":        mapCount,
-		"recent_projects":  recentProjects,
+		"recent_projects":  recentProjectsToWebs,
 	})
 
 }

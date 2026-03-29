@@ -1,0 +1,29 @@
+{
+  "name": "react-elevated-road-editor",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.1.2",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.16.7",
+    "@use-gesture/react": "^10.2.12",
+    "events": "^3.3.0",
+    "itowns": "^2.46.0",
+    "proj4": "^2.20.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.13.1",
+    "three": "^0.174.0",
+    "xml2js": "^0.4.23"
+  },
+  "devDependencies": {
+    "@types/xml2js": "^0.4.14",
+    "@vitejs/plugin-react": "^4.0.3",
+    "typescript": "^5.3.3",
+    "vite": "^5.2.0"
+  }
+}

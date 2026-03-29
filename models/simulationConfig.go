@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type SimulationConfig struct {
 	ID         uint   `gorm:"primaryKey"`
@@ -10,4 +13,10 @@ type SimulationConfig struct {
 	CreatedAt  time.Time
 
 	Project SimulationProject `gorm:"foreignKey:ProjectID"`
+}
+
+func testPool() {
+
+	sync.Pool = sync.Pool{}
+
 }

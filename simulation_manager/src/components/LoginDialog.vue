@@ -15,7 +15,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useUserStore } from '@/stores/user'
 import { login } from '@/api/user'
 import { ElMessage } from 'element-plus';
 const visible = defineModel<boolean>() // v-model:visible

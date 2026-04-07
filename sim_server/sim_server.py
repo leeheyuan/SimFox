@@ -11,8 +11,8 @@ def parse_args():
     parser.add_argument("--config", required=True, help="SUMO .sumocfg file")
     parser.add_argument("--duration", type=int, default=60, help="Simulation seconds")
     parser.add_argument("--speed", type=float, default=1.0, help="Simulation speed multiplier")
-    parser.add_argument("--ports", required=int, help="Ports")
-    parser.add_argument("--projectId", required=int, help="ProjectId")
+    parser.add_argument("--ports", required=True, help="Ports, example: 9001,9002")
+    parser.add_argument("--projectId", type=int, required=True, help="ProjectId")
     return parser.parse_args()
 
 async def main():

@@ -17,7 +17,7 @@ import * as THREE from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 
-import { createRoadMesh, createJunctionMesh ,createRoadMeshFromLonLat} from "../utils/roadGeometry";
+import { createRoadMesh, createJunctionMesh } from "../utils/roadGeometry";
 import {
   buildLaneLines,
   updateLaneLinesResolution,
@@ -109,10 +109,9 @@ export function useRoadLayer({
         //roadResultRef.current = roadResult;
       }
  
-     /* const junctionResult = createJunctionMesh(junctions, roadTexture);
+      const junctionResult = createJunctionMesh(junctions, roadTexture);
       if (junctionResult) {
-        scene.add(junctionResult.mesh);
-        junctionResultRef.current = junctionResult;
+        scene.add(junctionResult);         
       }
  
       const opts: LaneLineOptions = {
@@ -122,7 +121,7 @@ export function useRoadLayer({
       };
       const lines = buildLaneLines(edges, opts);
       lines.forEach((l) => scene.add(l));
-      laneLines.current = lines;*/
+      laneLines.current = lines;
 
       onNeedRender?.();
     },

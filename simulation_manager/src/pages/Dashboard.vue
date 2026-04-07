@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getOverview } from '@/api/user'
+import { getOverview, type OverviewProjectItem, type OverviewResponse } from '@/api/user'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -55,23 +55,23 @@ const stats = ref({
 })
 
 
-const recentProjects = ref([])
+const recentProjects = ref<OverviewProjectItem[]>([])
 
 // <script setup> 写法（Composition API）
-const handleEnterProject = (row) => {
+const handleEnterProject = (row: OverviewProjectItem) => {
   console.log('进入项目：', row)
   // 路由跳转示例
   // router.push(`/project/${row.id}`)
   router.push('/sim-monitor')
 }
 
-const handleSimulate = (row) => {
+const handleSimulate = (row: OverviewProjectItem) => {
   console.log('开始仿真：', row)
   // ElMessage.success('开始仿真...')
 }
 
 onMounted(async () => {
-  const data = await getOverview()
+  const data: OverviewResponse | null = await getOverview().catch(() => null)
   if(data == null) { 
 
   } else {

@@ -23,6 +23,7 @@ import { checkTokenAndGetUserInfo } from '@/utils/auth'
 import { useUserStore } from '@/stores/user' 
 import LoginDialog from '@/components/LoginDialog.vue'
 import { User } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 
 const user = useUserStore()
 const showLogin = ref(false)

@@ -1,5 +1,5 @@
 import React from 'react';
-import RoadEditor from './components/RoadEditor';
+import RoadEditorWithImport from './components/RoadEditorWithImport';
 import { useWebSocket } from './hooks/useWebSocket';
 import { decodeMsgpackBlob } from './utils/msgpack'; 
 
@@ -32,6 +32,18 @@ export default function App() {
     loadXMLFile('osm.net.xml').then(setNetXML);
   }, []);
 
+  React.useEffect(() => {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token');
+    if (!token) {
+      return;
+    }
+
+    localStorage.setItem('token', token);
+    url.searchParams.delete('token');
+    window.history.replaceState({}, document.title, url.toString());
+  }, []);
+
  // App.js
 return (
   <BrowserRouter>
@@ -48,7 +60,7 @@ return (
       } />
 
       {/* 编辑器页面：独立渲染，不含 nav */}
-      <Route path="/editor" element={<RoadEditor />} />
+      <Route path="/editor" element={<RoadEditorWithImport />} />
       <Route path="/network " element={<RoadNetwork netXML={netXML}/>} />
     </Routes>
   </BrowserRouter>

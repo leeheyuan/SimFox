@@ -1,0 +1,175 @@
+package handlers
+
+import (
+	"SumoConfig"
+	"bytes"
+	"config"
+	"encoding/json"
+	"fmt"
+	"models"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"time"
+	"utils"
+
+	"github.com/gin-gonic/gin"
+)
+
+type ImportBoundsRequest struct {
+	South float64 `json:"south" binding:"required"`
+	West  float64 `json:"west" binding:"required"`
+	North float64 `json:"north" binding:"required"`
+	East  float64 `json:"east" binding:"required"`
+}
+
+func UpLoadMap(c *gin.Context) {
+	username := c.GetString("username")
+
+	var user models.User
+	if err := config.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	netFile, err := c.FormFile("netFile")
+	if err != nil {
+		c.String(http.StatusBadRequest, "netFile 获取失败: %v", err)
+		return
+	}
+
+	mapName, _ := utils.GenerateRandomString(5)
+	workDir := "SimulationConfig"
+	if !utils.DirExists(workDir) {
+		if err := os.Mkdir(workDir, 0o755); err != nil {
+			c.String(http.StatusBadRequest, "create dir failed")
+			return
+		}
+	}
+
+	netFilePath := fmt.Sprintf("%s/%s", workDir, mapName)
+	if err := c.SaveUploadedFile(netFile, netFilePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存地图文件失败: " + err.Error()})
+		return
+	}
+
+	mapData := models.MapData{
+		TenantID:   user.ID,
+		Name:       mapName,
+		FileURL:    netFilePath,
+		UploadedAt: time.Now(),
+	}
+	if err := config.DB.Create(&mapData).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "路网文件保存失败: " + err.Error()})
+		return
+	}
+
+	c.String(http.StatusOK, mapName)
+}
+
+func ImportMapByBounds(c *gin.Context) {
+	username := c.GetString("username")
+
+	var user models.User
+	if err := config.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	var req ImportBoundsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bounds: " + err.Error()})
+		return
+	}
+
+	if req.South >= req.North || req.West >= req.East {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bounds range"})
+		return
+	}
+
+	mapName, _ := utils.GenerateRandomString(8)
+	workDir := filepath.Join("SimulationConfig", user.Username, mapName)
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "create workdir failed: " + err.Error()})
+		return
+	}
+
+	osmPath := filepath.Join(workDir, "map.osm")
+	netPath := filepath.Join(workDir, "map.net.xml")
+
+	query := fmt.Sprintf(`[out:xml];
+way["highway"](%f,%f,%f,%f);
+out body;
+>;
+out skel qt;
+`, req.South, req.West, req.North, req.East)
+
+	resp, err := http.Post(
+		"https://overpass.kumi.systems/api/interpreter",
+		"text/plain",
+		bytes.NewBufferString(query),
+	)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "fetch overpass failed: " + err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusBadGateway, gin.H{"error": fmt.Sprintf("overpass returned %d", resp.StatusCode)})
+		return
+	}
+
+	osmData := new(bytes.Buffer)
+	if _, err := osmData.ReadFrom(resp.Body); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "read overpass response failed: " + err.Error()})
+		return
+	}
+
+	if err := os.WriteFile(osmPath, osmData.Bytes(), 0o644); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "save osm failed: " + err.Error()})
+		return
+	}
+
+	cmd := exec.Command("netconvert", "--osm-files", osmPath, "--output-file", netPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  "netconvert failed: " + err.Error(),
+			"detail": string(output),
+		})
+		return
+	}
+
+	mapData := models.MapData{
+		TenantID:   user.TenantID,
+		Name:       mapName,
+		FileURL:    netPath,
+		UploadedAt: time.Now(),
+	}
+	if err := config.DB.Create(&mapData).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "save map data failed: " + err.Error()})
+		return
+	}
+
+	var geojson any
+	if err := json.Unmarshal(SumoConfig.ToGeojson(netPath), &geojson); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "decode geojson failed: " + err.Error()})
+		return
+	}
+
+	netXML, err := os.ReadFile(netPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "read net.xml failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"mapName": mapName,
+		"osmFile": osmPath,
+		"netFile": netPath,
+		"geojson": geojson,
+		"netXml":  string(netXML),
+	})
+}

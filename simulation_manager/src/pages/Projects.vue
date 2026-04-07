@@ -18,7 +18,7 @@
       <el-table-column prop="createdAt" label="创建时间" />
       <el-table-column prop="updatedAt" label="更新时间" />
       <el-table-column label="操作" width="240">
-        <template #default="scope">
+        <template #default="_scope">
           <el-button type="primary" size="small">编辑</el-button>
           <el-button size="small">仿真</el-button>
           <el-button size="small" type="danger">删除</el-button>

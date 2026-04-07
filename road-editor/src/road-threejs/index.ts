@@ -16,6 +16,7 @@ export {
   buildMergedJunctionGeometry,
   createRoadMesh,
   createJunctionMesh,
+  createJunctionMeshFromLonLat,
 } from "./utils/roadGeometry";
 export type { Edge, Lane, Junction, RoadMeshResult } from "./utils/roadGeometry";
 
@@ -31,6 +32,5 @@ export {
   disposeLaneLines,
 } from "./utils/laneLines";
 export type { LaneLineOptions } from "./utils/laneLines";
-
 
 

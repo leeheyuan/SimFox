@@ -58,10 +58,7 @@ func (pm *PortManager) getFreePorts(count int) ([]int, error) {
 }
 
 func (pm *PortManager) StartProcess(command string, count int, args ...string) ([]int, error) {
-	pm.mu.Lock()
-	defer pm.mu.Unlock()
-
-	ports, err := pm.getFreePorts(count)
+	ports, err := pm.AllocatePorts(count)
 	if err != nil {
 		return nil, err
 	}
@@ -80,27 +77,41 @@ func (pm *PortManager) StartProcess(command string, count int, args ...string) (
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
-		for _, p := range ports {
-			delete(pm.used, p)
-		}
+		pm.ReleasePorts(ports)
 		return nil, err
 	}
 
+	pm.mu.Lock()
 	pm.procMap[cmd] = ports
+	pm.mu.Unlock()
 
 	// 回收端口
 	go func(cmd *exec.Cmd, ports []int) {
 		_ = cmd.Wait()
+		pm.ReleasePorts(ports)
 		pm.mu.Lock()
-		defer pm.mu.Unlock()
 		fmt.Printf("🔁 回收子进程端口: %v\n", ports)
-		for _, p := range ports {
-			delete(pm.used, p)
-		}
 		delete(pm.procMap, cmd)
+		pm.mu.Unlock()
 	}(cmd, ports)
 
 	return ports, nil
+}
+
+func (pm *PortManager) AllocatePorts(count int) ([]int, error) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	return pm.getFreePorts(count)
+}
+
+func (pm *PortManager) ReleasePorts(ports []int) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	for _, p := range ports {
+		delete(pm.used, p)
+	}
 }
 
 func (pm *PortManager) ListUsedPorts() map[*exec.Cmd][]int {

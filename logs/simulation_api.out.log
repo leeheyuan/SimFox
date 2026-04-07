@@ -1,0 +1,19 @@
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] POST   /map/convert-osm          --> handlers.ConvertUploadedOSM (4 handlers)
+[GIN-debug] GET    /overview                 --> handlers.GetSimulationOverview (5 handlers)
+[GIN-debug] POST   /uploadmap                --> handlers.UpLoadMap (5 handlers)
+[GIN-debug] POST   /map/import-bounds        --> handlers.ImportMapByBounds (5 handlers)
+[GIN-debug] POST   /project/generate         --> handlers.GenerateProject (5 handlers)
+[GIN-debug] GET    /project/projects         --> handlers.ListProjects (5 handlers)
+[GIN-debug] POST   /project/:id/run          --> handlers.EnqueueProjectTask (5 handlers)
+[GIN-debug] GET    /project/:id/tasks        --> handlers.ListProjectTasks (5 handlers)
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on :8082
+[GIN] 2026/04/05 - 21:27:00 | 500 |    379.8668ms |       127.0.0.1 | POST     "/map/convert-osm"
+[GIN] 2026/04/05 - 21:28:45 | 500 |     92.4516ms |       127.0.0.1 | POST     "/map/convert-osm"

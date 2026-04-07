@@ -1,0 +1,213 @@
+
+2026/04/01 20:23:25 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.611ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:28 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.029ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:31 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.291ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:34 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.306ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:37 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.124ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:40 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.821ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:43 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.272ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:46 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.246ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:49 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.954ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:52 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.410ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:55 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.198ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:23:58 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.263ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:01 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.462ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:04 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.624ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:07 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.603ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:10 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.101ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:13 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.077ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:16 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.164ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:19 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.473ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:22 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.409ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:25 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.340ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:28 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.816ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:31 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.667ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:34 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.724ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:37 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.932ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:40 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[66.576ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:43 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.159ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:46 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.409ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:49 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.365ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:52 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.139ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:55 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[30.084ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:24:58 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.160ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:01 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.345ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:04 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.078ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:07 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[14.530ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:10 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.913ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:13 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[18.059ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:16 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.372ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:19 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.206ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:22 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.854ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:25 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.492ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:28 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.029ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:31 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.425ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:34 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.540ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:37 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.767ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:40 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.914ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:43 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[47.565ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:46 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[45.335ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:49 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.020ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:52 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.183ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:55 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.682ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:25:58 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.018ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:01 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[17.236ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:04 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.442ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:07 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.894ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:10 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.109ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:13 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.070ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:16 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.312ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:19 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[26.430ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:22 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.775ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:25 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[18.590ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:28 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.946ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:31 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.009ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:34 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.162ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:37 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.344ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:40 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.568ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:43 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.986ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:46 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.093ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:49 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.027ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:52 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[15.847ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1
+
+2026/04/01 20:26:55 [31;1mE:/SimFox/SimulationScheduling/main.go:97 [35;1mrecord not found
+[0m[33m[16.323ms] [34;1m[rows:0][0m SELECT * FROM `simulation_tasks` WHERE status = 'pending' ORDER BY id asc,`simulation_tasks`.`id` LIMIT 1

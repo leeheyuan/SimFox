@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 
 import { ElMessage, type UploadFile } from 'element-plus'  
  
@@ -119,6 +119,10 @@ const handleAddiTionalRemove = (_: UploadFile, fileList: UploadFile[]) => {
  
 import { generate } from '@/api/user'
 
+const onProgress = (_payload: { percent: number }) => {}
+const onSuccess = (_payload: Record<string, never>) => {}
+const onError = (_error: Error) => {}
+
 /*
 import { useRouter } from 'vue-router'
 const router = useRouter()
@@ -153,12 +157,13 @@ const handleConfirm = async () => {
   
 
   const success = await generate(formData, (percent) => {
-    if (onProgress) onProgress({ percent })
+    onProgress({ percent })
   })
 
   if (success) {
-    ElMessage.success('上传成功')
     onSuccess({})
+    ElMessage.success('上传成功')
+    dialogVisible.value = false
   } else {
     ElMessage.error('上传失败')
     onError(new Error('上传失败'))

@@ -3,16 +3,11 @@ package main
 import (
 	"config"
 	"handlers"
-	"middleware"
 	"net/http"
 	"strings"
-	"user_auth/docs"
-	_ "user_auth/docs"
 	"utils"
 
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func corsMiddleware() gin.HandlerFunc {
@@ -84,27 +79,14 @@ func corsMiddleware() gin.HandlerFunc {
 
 func main() {
 	config.InitDB()
+	if err := autoMigrate(); err != nil {
+		panic(err)
+	}
 
 	r := gin.Default()
 	r.Use(corsMiddleware())
 	r.POST("/register", handlers.Register)
 	r.POST("/login", handlers.Login)
 	r.POST("/create-tenant-user", handlers.CreateTenantUser)
-	r.GET("/overview", handlers.GetUserOverview)
-	r.POST("/uploadmap", handlers.UpLoadMap)
-
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	auth := r.Group("/api")
-	auth.Use(middleware.AuthMiddleware())
-	auth.GET("/profile", func(c *gin.Context) {
-		username := c.MustGet("username").(string)
-		c.JSON(200, gin.H{"message": "Welcome " + username})
-	})
-
-	project := r.Group("project")
-	project.Use(corsMiddleware())
-	project.POST("/generate", handlers.Generate)
-
-	docs.SwaggerInfo.Host = "127.0.0.1:8080"
 	r.Run(":8080")
 }

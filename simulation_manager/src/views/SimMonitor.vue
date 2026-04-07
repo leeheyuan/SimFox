@@ -27,9 +27,26 @@
       <!-- 中间 3D 视图 -->
       <el-col :span="12">
         <el-card class="panel">
-          <h3>实时3D仿真视图</h3>
+          <div class="panel-header">
+            <h3>实时3D仿真视图</h3>
+            <a
+              class="editor-link"
+              :href="roadEditorUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              新窗口打开
+            </a>
+          </div>
           <div id="three-container" class="three-box">
-            <!-- 这里放 Three.js / Unreal Pixel Streaming -->
+            <iframe
+              class="road-editor-frame"
+              :src="roadEditorUrl"
+              title="Road Editor"
+            />
+            <div v-if="!roadEditorUrl" class="frame-fallback">
+              未配置 road-editor 地址
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -60,8 +77,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { computed, ref, onMounted } from "vue"
 import * as echarts from "echarts"
+
+const roadEditorBaseUrl =
+  import.meta.env.VITE_ROAD_EDITOR_URL || "http://localhost:5174/editor"
+
+const roadEditorUrl = computed(() => {
+  const token = localStorage.getItem("token")
+  if (!roadEditorBaseUrl) return ""
+
+  try {
+    const url = new URL(roadEditorBaseUrl)
+    if (token) {
+      url.searchParams.set("token", token)
+    }
+    return url.toString()
+  } catch {
+    return roadEditorBaseUrl
+  }
+})
 
 const kpiList = ref([
   { label: "仿真时间", value: "0 s" },
@@ -171,9 +206,47 @@ onMounted(() => {
   color: #fff;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-link {
+  color: #38bdf8;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.editor-link:hover {
+  color: #7dd3fc;
+}
+
 .three-box {
+  position: relative;
   height: 400px;
   background: #0b1120;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.road-editor-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #020617;
+}
+
+.frame-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 14px;
 }
 
 .chart-box {

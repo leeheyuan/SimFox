@@ -26,11 +26,9 @@ export type { ParseNetXMLResult } from "./utils/parseNetXML";
 
 // 车道线工具
 export {
-  createLaneLine,
   buildLaneLines,
   updateLaneLinesResolution,
   disposeLaneLines,
 } from "./utils/laneLines";
 export type { LaneLineOptions } from "./utils/laneLines";
-
 

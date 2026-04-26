@@ -14,9 +14,6 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import * as THREE from "three";
-import { Line2 } from "three/examples/jsm/lines/Line2";
-import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
-
 import { createRoadMesh, createJunctionMesh } from "../utils/roadGeometry";
 import {
   buildLaneLines,
@@ -24,7 +21,7 @@ import {
   disposeLaneLines,
   type LaneLineOptions,
 } from "../utils/laneLines";
-import type { Edge, Junction, RoadMeshResult } from "../utils/roadGeometry";
+import type { Edge, Junction } from "../utils/roadGeometry";
 
 // ─────────────────────────────────────────────
 // 类型
@@ -67,29 +64,29 @@ export function useRoadLayer({
 }: UseRoadLayerOptions): UseRoadLayerReturn {
 
   // 持有当前已加入 scene 的对象引用
-  const sceneRef         = useRef<THREE.Scene | null>(null);
-  const roadResultRef    = useRef<RoadMeshResult | null>(null);
-  const junctionResultRef= useRef<RoadMeshResult | null>(null);
-  const laneLines        = useRef<Line2[]>([]);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const roadObjectRef = useRef<THREE.Object3D | null>(null);
+  const junctionObjectRef = useRef<THREE.Object3D | null>(null);
+  const laneLines = useRef<THREE.Object3D | null>(null);
 
   // ── 销毁并从 scene 移除当前所有对象 ──
   const removeFromScene = useCallback(() => {
     const scene = sceneRef.current;
     if (!scene) return;
 
-    if (roadResultRef.current) {
-      scene.remove(roadResultRef.current.mesh);
-      roadResultRef.current.dispose();
-      roadResultRef.current = null;
+    if (roadObjectRef.current) {
+      scene.remove(roadObjectRef.current);
+      roadObjectRef.current = null;
     }
-    if (junctionResultRef.current) {
-      scene.remove(junctionResultRef.current.mesh);
-      junctionResultRef.current.dispose();
-      junctionResultRef.current = null;
+    if (junctionObjectRef.current) {
+      scene.remove(junctionObjectRef.current);
+      junctionObjectRef.current = null;
     }
-    laneLines.current.forEach((l) => scene.remove(l));
-    disposeLaneLines(laneLines.current);
-    laneLines.current = [];
+
+    if (laneLines.current) {
+      scene.remove(laneLines.current);
+      laneLines.current = null;
+    }
 
     sceneRef.current = null;
   }, []);
@@ -105,24 +102,24 @@ export function useRoadLayer({
       // 路面
       const g = createRoadMesh(edges, roadTexture);
       if (g) {
-        scene.add(g);
-        //roadResultRef.current = roadResult;
+          scene.add(g);
+        roadObjectRef.current = g;
       }
- 
+
       const junctionResult = createJunctionMesh(junctions, roadTexture);
       if (junctionResult) {
-        scene.add(junctionResult);         
+          scene.add(junctionResult);
+        junctionObjectRef.current = junctionResult;
       }
- 
+
       const opts: LaneLineOptions = {
-        resolutionWidth:  container?.clientWidth  ?? window.innerWidth,
-        resolutionHeight: container?.clientHeight ?? window.innerHeight,
         ...laneLineOptions,
       };
-      const lines = buildLaneLines(edges, opts);
-      lines.forEach((l) => scene.add(l));
-      laneLines.current = lines;
-
+      const line = buildLaneLines(edges, opts);
+      if (line) {
+        scene.add(line);
+        laneLines.current = line;
+      }
       onNeedRender?.();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +128,7 @@ export function useRoadLayer({
 
   // ── 更新分辨率 ──
   const updateResolution = useCallback((width: number, height: number) => {
-    updateLaneLinesResolution(laneLines.current, width, height);
+    //updateLaneLinesResolution(laneLines.current, width, height);
   }, []);
 
   // ── 如果外部传入了 scene，自动管理挂载 ──
@@ -146,7 +143,7 @@ export function useRoadLayer({
     if (!container && !externalScene) return;
 
     const handleResize = () => {
-      const w = container?.clientWidth  ?? window.innerWidth;
+      const w = container?.clientWidth ?? window.innerWidth;
       const h = container?.clientHeight ?? window.innerHeight;
       updateResolution(w, h);
       onNeedRender?.();

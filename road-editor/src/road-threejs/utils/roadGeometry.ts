@@ -9,7 +9,7 @@ import { Coordinates } from '@itowns/geographic'
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 import { wgs84ToENU, wgs84ToItowns } from "./parseNetXML";
 
-const asphaltTexture = new THREE.TextureLoader().load('/textures/asphalt.jpg');
+const asphaltTexture = new THREE.TextureLoader().load('/textures/沥青4.jpg');
 asphaltTexture.wrapS = THREE.RepeatWrapping;
 asphaltTexture.wrapT = THREE.RepeatWrapping;
 asphaltTexture.colorSpace = THREE.SRGBColorSpace;
@@ -229,7 +229,7 @@ function getAltitudeOffsetByLength(lengthMeters: number, baseOffset = 0.35) {
 
 export function createJunctionMeshFromLonLat(
   pathPoints: THREE.Vector3[],
-  material?: THREE.MeshStandardMaterial
+  material?: THREE.Material
 ): THREE.Mesh | null {
   const validPoints = pathPoints.filter(isFiniteGeoPoint);
   if (validPoints.length < 3) return null;
@@ -269,7 +269,7 @@ export function createJunctionMeshFromLonLat(
 export function createRoadMeshFromLonLat(
   pathPoints: THREE.Vector3[],
   width: number,
-  material?: THREE.MeshStandardMaterial
+  material?: THREE.Material
 ): THREE.Mesh | null {
   const validPoints = pathPoints.filter(isFiniteGeoPoint);
   if (validPoints.length < 2) return null;

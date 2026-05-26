@@ -1,0 +1,3 @@
+$script:SimFoxLocalConfig = @{
+  MySqlDsn = "root:your-password@tcp(127.0.0.1:3306)/simulationtraffic?charset=utf8mb4&parseTime=True&loc=Local"
+}

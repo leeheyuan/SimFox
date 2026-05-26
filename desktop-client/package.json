@@ -1,0 +1,22 @@
+{
+  "name": "@simfox/desktop-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm --prefix ../simulation_manager run dev -- --host 127.0.0.1 --port 5174\" \"node ../simulation_manager/node_modules/typescript/bin/tsc -p tsconfig.json --watch\" \"wait-on tcp:5174 dist/main/index.js && cross-env SIMFOX_DESKTOP_URL=http://127.0.0.1:5174 electron .\"",
+    "build": "npm --prefix ../simulation_manager run build && node ../simulation_manager/node_modules/typescript/bin/tsc -p tsconfig.json",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^35.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.9.3",
+    "wait-on": "^8.0.5"
+  }
+}

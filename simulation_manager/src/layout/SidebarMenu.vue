@@ -1,34 +1,43 @@
 <template>
   <el-menu
-    default-active="$route.path"
+    :default-active="$route.path"
     class="el-menu-vertical"
     :router="true"
-    background-color="#2d3a4b"
-    text-color="#fff"
-    active-text-color="#ffd04b"
+    background-color="#1f2937"
+    text-color="#e5e7eb"
+    active-text-color="#7dd3fc"
   >
     <el-menu-item index="/">
       <el-icon><House /></el-icon>
-      <span>首页</span>
+      <span>Overview</span>
     </el-menu-item>
-    <el-menu-item index="/Projects">
+    <el-menu-item index="/projects">
       <el-icon><Document /></el-icon>
-      <span>我的项目</span>
+      <span>Projects</span>
     </el-menu-item>
-     <el-menu-item index="/Simulation">
+    <el-menu-item index="/tasks">
       <el-icon><Cpu /></el-icon>
-      <span>仿真运行</span>
+      <span>Tasks</span>
     </el-menu-item>
-    <!-- <el-menu-item index="/map-editor">
-      <el-icon><MapLocation /></el-icon>
-      <span>地图编辑</span>
-    </el-menu-item> -->   
+    <el-menu-item index="/results">
+      <el-icon><DataAnalysis /></el-icon>
+      <span>Results</span>
+    </el-menu-item>
+    <el-menu-item index="/cluster">
+      <el-icon><Connection /></el-icon>
+      <span>Cluster</span>
+    </el-menu-item>
+    <el-menu-item index="/settings">
+      <el-icon><Setting /></el-icon>
+      <span>Settings</span>
+    </el-menu-item>
   </el-menu>
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router' 
-import { House,Document,Cpu, MapLocation, Setting } from '@element-plus/icons-vue'
+import { useRoute } from 'vue-router'
+import { Connection, Cpu, DataAnalysis, Document, House, Setting } from '@element-plus/icons-vue'
+
 const $route = useRoute()
 </script>
 
@@ -38,9 +47,3 @@ const $route = useRoute()
   border-right: none;
 }
 </style>
-
- <!--<el-menu-item index="Dashboard">首页</el-menu-item>
-      <el-menu-item index="Projects">我的项目</el-menu-item>
-      <el-menu-item index="Simulation">仿真运行</el-menu-item>
-      <el-menu-item index="MapEditor">地图编辑</el-menu-item>
-      <el-menu-item index="/settings">系统设置</el-menu-item>-->

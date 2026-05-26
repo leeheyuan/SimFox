@@ -3,6 +3,7 @@ package handlers
 import (
 	"SumoConfig"
 	"config"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -10,7 +11,9 @@ import (
 	"models"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +32,12 @@ type CreateTaskRequest struct {
 	Speed          float64 `json:"speed"`
 }
 
+type importManifest struct {
+	ConfigPath      string   `json:"configPath"`
+	DependencyPaths []string `json:"dependencyPaths"`
+	ProjectFiles    []string `json:"projectFiles"`
+}
+
 type ProjectListItem struct {
 	ID        uint      `json:"id"`
 	Name      string    `json:"name"`
@@ -40,12 +49,17 @@ type ProjectListItem struct {
 type TaskListItem struct {
 	ID              uint       `json:"id"`
 	Status          string     `json:"status"`
+	Progress        int        `json:"progress"`
+	WorkerID        *uint      `json:"workerId"`
+	QueueName       string     `json:"queueName"`
 	DurationSeconds int32      `json:"durationSeconds"`
 	Speed           float64    `json:"speed"`
 	MonitorPort     int        `json:"monitorPort"`
 	TraCIPort       int        `json:"traCIPort"`
 	LastError       string     `json:"lastError"`
 	CreatedAt       time.Time  `json:"createdAt"`
+	SubmittedAt     *time.Time `json:"submittedAt"`
+	ScheduledAt     *time.Time `json:"scheduledAt"`
 	StartedAt       *time.Time `json:"startedAt"`
 	EndedAt         *time.Time `json:"endedAt"`
 }
@@ -114,11 +128,12 @@ func GenerateProject(c *gin.Context) {
 		createdTask := models.SimulationTask{
 			ProjectID:       project.ID,
 			ConfigID:        simConfig.ID,
-			Status:          "pending",
+			Status:          "queued",
 			DurationSeconds: req.SimulationTime,
 			Speed:           req.Speed,
 			CreatedAt:       now,
 			UpdatedAt:       now,
+			SubmittedAt:     &now,
 		}
 		if err := config.DB.Create(&createdTask).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建仿真任务失败: " + err.Error()})
@@ -160,6 +175,96 @@ func ListProjects(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"projects": items})
+}
+
+func ImportProject(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	var req GenerateProjectRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+	if req.Speed <= 0 {
+		req.Speed = 1
+	}
+
+	projectDir, configPath, manifest, err := importSimulationAssets(c, user, req.Name)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	now := time.Now()
+	mapData := models.MapData{
+		FileURL:    configPath,
+		Name:       req.Name + "_map",
+		TenantID:   user.TenantID,
+		UploadedAt: now,
+	}
+	if err := config.DB.Create(&mapData).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建地图数据失败: " + err.Error()})
+		return
+	}
+
+	project := models.SimulationProject{
+		TenantID:    user.TenantID,
+		Name:        req.Name,
+		Status:      "ready",
+		Description: fmt.Sprintf("imported simulation project %s", req.Name),
+		MapDataID:   mapData.ID,
+		MapData:     mapData,
+		UpdateAt:    now,
+		CreatedAt:   now,
+	}
+	if err := config.DB.Create(&project).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建项目失败: " + err.Error()})
+		return
+	}
+
+	simConfig := models.SimulationConfig{
+		ProjectID:  project.ID,
+		Name:       req.Name + "_config",
+		ConfigPath: configPath,
+		CreatedAt:  now,
+	}
+	if err := config.DB.Create(&simConfig).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建仿真配置失败: " + err.Error()})
+		return
+	}
+
+	var task *models.SimulationTask
+	if req.IsNowRun {
+		createdTask := models.SimulationTask{
+			ProjectID:       project.ID,
+			ConfigID:        simConfig.ID,
+			Status:          "queued",
+			DurationSeconds: req.SimulationTime,
+			Speed:           req.Speed,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+			SubmittedAt:     &now,
+		}
+		if err := config.DB.Create(&createdTask).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建仿真任务失败: " + err.Error()})
+			return
+		}
+		task = &createdTask
+		project.Status = "queued"
+		_ = config.DB.Model(&project).Update("status", "queued").Error
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "import project successfully",
+		"projectId":  project.ID,
+		"projectDir": projectDir,
+		"configPath": configPath,
+		"manifest":   manifest,
+		"taskId":     taskID(task),
+	})
 }
 
 func EnqueueProjectTask(c *gin.Context) {
@@ -206,11 +311,12 @@ func EnqueueProjectTask(c *gin.Context) {
 	task := models.SimulationTask{
 		ProjectID:       project.ID,
 		ConfigID:        simConfig.ID,
-		Status:          "pending",
+		Status:          "queued",
 		DurationSeconds: req.SimulationTime,
 		Speed:           req.Speed,
 		CreatedAt:       now,
 		UpdatedAt:       now,
+		SubmittedAt:     &now,
 	}
 	if err := config.DB.Create(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建仿真任务失败: " + err.Error()})
@@ -219,7 +325,7 @@ func EnqueueProjectTask(c *gin.Context) {
 
 	if err := config.DB.Model(&models.SimulationProject{}).
 		Where("id = ?", project.ID).
-		Updates(map[string]any{"status": "pending", "update_at": now}).Error; err != nil {
+		Updates(map[string]any{"status": "queued", "update_at": now}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新项目状态失败: " + err.Error()})
 		return
 	}
@@ -260,12 +366,17 @@ func ListProjectTasks(c *gin.Context) {
 		items = append(items, TaskListItem{
 			ID:              task.ID,
 			Status:          task.Status,
+			Progress:        task.Progress,
+			WorkerID:        task.WorkerID,
+			QueueName:       task.QueueName,
 			DurationSeconds: task.DurationSeconds,
 			Speed:           task.Speed,
 			MonitorPort:     task.MonitorPort,
 			TraCIPort:       task.TraCIPort,
 			LastError:       task.LastError,
 			CreatedAt:       task.CreatedAt,
+			SubmittedAt:     task.SubmittedAt,
+			ScheduledAt:     task.ScheduledAt,
 			StartedAt:       task.StartedAt,
 			EndedAt:         task.EndedAt,
 		})
@@ -388,6 +499,144 @@ func ensureSimulationConfig(project models.SimulationProject) (models.Simulation
 		CreatedAt:  time.Now(),
 	}
 	return simConfig, config.DB.Create(&simConfig).Error
+}
+
+func importSimulationAssets(c *gin.Context, user models.User, projectName string) (string, string, importManifest, error) {
+	form, err := c.MultipartForm()
+	if err != nil {
+		return "", "", importManifest{}, fmt.Errorf("获取表单失败: %w", err)
+	}
+
+	configFileHeaders := form.File["configFile"]
+	projectFileHeaders := form.File["projectFiles"]
+	if len(configFileHeaders) == 0 {
+		return "", "", importManifest{}, fmt.Errorf("缺少 sumocfg 配置文件")
+	}
+
+	manifest := importManifest{}
+	if rawManifest := strings.TrimSpace(c.PostForm("manifest")); rawManifest != "" {
+		if err := json.Unmarshal([]byte(rawManifest), &manifest); err != nil {
+			return "", "", importManifest{}, fmt.Errorf("解析导入清单失败: %w", err)
+		}
+	}
+
+	workDir := "SimulationConfig"
+	userDir := filepath.Join(workDir, user.Username)
+	projectDir := filepath.Join(userDir, projectName)
+	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+		return "", "", importManifest{}, fmt.Errorf("创建项目目录失败: %w", err)
+	}
+
+	configHeader := configFileHeaders[0]
+	configRelativePath := normalizeUploadPath(manifest.ConfigPath)
+	if configRelativePath == "" {
+		configRelativePath = normalizeUploadPath(configHeader.Filename)
+	}
+	configAbsolutePath := filepath.Join(projectDir, configRelativePath)
+	if err := os.MkdirAll(filepath.Dir(configAbsolutePath), 0o755); err != nil {
+		return "", "", importManifest{}, fmt.Errorf("创建配置目录失败: %w", err)
+	}
+	if err := c.SaveUploadedFile(configHeader, configAbsolutePath); err != nil {
+		return "", "", importManifest{}, fmt.Errorf("保存配置文件失败: %w", err)
+	}
+
+	for index, file := range projectFileHeaders {
+		relativePath := ""
+		if index < len(manifest.ProjectFiles) {
+			relativePath = normalizeUploadPath(manifest.ProjectFiles[index])
+		}
+		if relativePath == "" {
+			relativePath = normalizeUploadPath(file.Filename)
+		}
+		if relativePath == configRelativePath {
+			continue
+		}
+
+		savePath := filepath.Join(projectDir, relativePath)
+		if err := os.MkdirAll(filepath.Dir(savePath), 0o755); err != nil {
+			return "", "", importManifest{}, fmt.Errorf("创建依赖目录失败: %w", err)
+		}
+		if err := c.SaveUploadedFile(file, savePath); err != nil {
+			return "", "", importManifest{}, fmt.Errorf("保存依赖文件 %s 失败: %w", relativePath, err)
+		}
+	}
+
+	configBytes, err := os.ReadFile(configAbsolutePath)
+	if err != nil {
+		return "", "", importManifest{}, fmt.Errorf("读取配置文件失败: %w", err)
+	}
+
+	var sumoConfig SumoConfig.SumoConfiguration
+	if err := xml.Unmarshal(configBytes, &sumoConfig); err != nil {
+		return "", "", importManifest{}, fmt.Errorf("解析 sumocfg 失败: %w", err)
+	}
+
+	dependencies := referencedPaths(sumoConfig)
+	configDir := filepath.Dir(configRelativePath)
+	for _, dependency := range dependencies {
+		resolvedRelativePath := normalizeUploadPath(filepath.Join(configDir, dependency))
+		if _, err := os.Stat(filepath.Join(projectDir, resolvedRelativePath)); err != nil {
+			return "", "", importManifest{}, fmt.Errorf("缺少配置依赖文件: %s", dependency)
+		}
+	}
+
+	return projectDir, configAbsolutePath, importManifest{
+		ConfigPath:      configRelativePath,
+		DependencyPaths: dependencies,
+		ProjectFiles:    manifest.ProjectFiles,
+	}, nil
+}
+
+func referencedPaths(cfg SumoConfig.SumoConfiguration) []string {
+	if cfg.Input == nil {
+		return nil
+	}
+
+	paths := make([]string, 0, 8)
+	if value := strings.TrimSpace(cfg.Input.NetFile.Value); value != "" {
+		paths = append(paths, value)
+	}
+	paths = append(paths, splitReferencedPaths(cfg.Input.RouteFiles.Value)...)
+	if cfg.Input.AdditionalFiles != nil {
+		paths = append(paths, splitReferencedPaths(cfg.Input.AdditionalFiles.Value)...)
+	}
+	if cfg.GuiOnly != nil {
+		paths = append(paths, splitReferencedPaths(cfg.GuiOnly.GUISettingsFile.Value)...)
+	}
+	return paths
+}
+
+func splitReferencedPaths(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value != "" {
+			items = append(items, normalizeUploadPath(value))
+		}
+	}
+	return items
+}
+
+func normalizeUploadPath(value string) string {
+	normalized := strings.ReplaceAll(strings.TrimSpace(value), "\\", "/")
+	normalized = strings.TrimPrefix(normalized, "./")
+	return pathClean(normalized)
+}
+
+func pathClean(value string) string {
+	if value == "" {
+		return ""
+	}
+	cleaned := filepath.ToSlash(filepath.Clean(value))
+	if cleaned == "." {
+		return ""
+	}
+	return strings.TrimPrefix(cleaned, "/")
 }
 
 func taskID(task *models.SimulationTask) any {

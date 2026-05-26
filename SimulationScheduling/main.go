@@ -67,15 +67,28 @@ func main() {
 }
 
 func autoMigrate() error {
-	return config.DB.AutoMigrate(
+	if err := config.DB.AutoMigrate(
 		&models.Tenant{},
 		&models.User{},
-		&models.SimulationProject{},
 		&models.MapData{},
+		&models.Artifact{},
+		&models.WorkerNode{},
+	); err != nil {
+		return err
+	}
+
+	if err := config.DB.AutoMigrate(
+		&models.SimulationProject{},
 		&models.SimulationConfig{},
-		&models.SimulationTask{},
 		&models.SimulationResult{},
 		&models.Simulation{},
+	); err != nil {
+		return err
+	}
+
+	return config.DB.AutoMigrate(
+		&models.SimulationTask{},
+		&models.TaskLog{},
 	)
 }
 
@@ -94,7 +107,7 @@ func (s *scheduler) dispatchAvailableTasks() {
 
 func (s *scheduler) dispatchOneTask() (bool, error) {
 	var task models.SimulationTask
-	err := config.DB.Preload("Config").Order("id asc").Where("status = ?", "pending").First(&task).Error
+	err := config.DB.Preload("Config").Order("priority desc, id asc").Where("status = ?", "queued").First(&task).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, nil
 	}
@@ -104,12 +117,13 @@ func (s *scheduler) dispatchOneTask() (bool, error) {
 
 	now := time.Now()
 	result := config.DB.Model(&models.SimulationTask{}).
-		Where("id = ? AND status = ?", task.ID, "pending").
+		Where("id = ? AND status = ?", task.ID, "queued").
 		Updates(map[string]any{
-			"status":     "running",
-			"started_at": now,
-			"updated_at": now,
-			"last_error": "",
+			"status":       "running",
+			"scheduled_at": now,
+			"started_at":   now,
+			"updated_at":   now,
+			"last_error":   "",
 		})
 	if result.Error != nil {
 		return false, result.Error
@@ -192,7 +206,8 @@ func (s *scheduler) executeTask(taskID uint) {
 	if err := config.DB.Model(&models.SimulationTask{}).
 		Where("id = ?", task.ID).
 		Updates(map[string]any{
-			"status":     "finished",
+			"status":     "succeeded",
+			"progress":   100,
 			"ended_at":   finishedAt,
 			"updated_at": finishedAt,
 		}).Error; err != nil {
@@ -202,7 +217,7 @@ func (s *scheduler) executeTask(taskID uint) {
 	if err := config.DB.Model(&models.SimulationProject{}).
 		Where("id = ?", task.ProjectID).
 		Updates(map[string]any{
-			"status":    "finished",
+			"status":    "succeeded",
 			"update_at": finishedAt,
 		}).Error; err != nil {
 		log.Printf("update finished project %d failed: %v", task.ProjectID, err)
@@ -216,7 +231,7 @@ func (s *scheduler) failTask(task models.SimulationTask, runErr error) {
 	if err := config.DB.Model(&models.SimulationTask{}).
 		Where("id = ?", task.ID).
 		Updates(map[string]any{
-			"status":     "error",
+			"status":     "failed",
 			"last_error": message,
 			"ended_at":   finishedAt,
 			"updated_at": finishedAt,
@@ -227,7 +242,7 @@ func (s *scheduler) failTask(task models.SimulationTask, runErr error) {
 	if err := config.DB.Model(&models.SimulationProject{}).
 		Where("id = ?", task.ProjectID).
 		Updates(map[string]any{
-			"status":    "error",
+			"status":    "failed",
 			"update_at": finishedAt,
 		}).Error; err != nil {
 		log.Printf("update failed project %d failed: %v", task.ProjectID, err)

@@ -1,29 +1,26 @@
-// api/index.ts
 import axios from 'axios'
+import { resolveApiBase } from './base'
 
 const http = axios.create({
-  baseURL: '/api', // 可在 vite.config.ts 里配置代理
+  baseURL: resolveApiBase('/api'),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// 请求拦截器
 http.interceptors.request.use((config) => {
-  // 例如添加 token
   const token = localStorage.getItem('token')
   if (token) {
-    config.headers.Authorization = `${token}`
+    config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`
   }
   return config
 })
 
-// 响应拦截器
 http.interceptors.response.use(
   (res) => res.data,
   (err) => {
-    console.error('请求错误:', err)
+    console.error('request error:', err)
     return Promise.reject(err)
   }
 )

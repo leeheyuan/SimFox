@@ -6,14 +6,27 @@ import (
 )
 
 func autoMigrate() error {
-	return config.DB.AutoMigrate(
+	if err := config.DB.AutoMigrate(
 		&models.Tenant{},
 		&models.User{},
-		&models.SimulationProject{},
 		&models.MapData{},
+		&models.Artifact{},
+		&models.WorkerNode{},
+	); err != nil {
+		return err
+	}
+
+	if err := config.DB.AutoMigrate(
+		&models.SimulationProject{},
 		&models.SimulationConfig{},
-		&models.SimulationTask{},
 		&models.SimulationResult{},
 		&models.Simulation{},
+	); err != nil {
+		return err
+	}
+
+	return config.DB.AutoMigrate(
+		&models.SimulationTask{},
+		&models.TaskLog{},
 	)
 }

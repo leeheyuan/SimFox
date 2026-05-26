@@ -29,3 +29,6 @@ user_auth/user_auth
 # IDE / OS
 .DS_Store
 Thumbs.db
+
+# Local startup overrides
+simfox.local.ps1

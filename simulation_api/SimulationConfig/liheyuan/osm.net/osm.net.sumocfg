@@ -1,0 +1,5 @@
+<sumoConfiguration>
+  <input>
+    <net-file value="osm.net.xml" />
+  </input>
+</sumoConfiguration>

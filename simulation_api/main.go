@@ -42,9 +42,17 @@ func main() {
 
 	project := protected.Group("/project")
 	project.POST("/generate", handlers.GenerateProject)
+	project.POST("/import", handlers.ImportProject)
 	project.GET("/projects", handlers.ListProjects)
 	project.POST("/:id/run", handlers.EnqueueProjectTask)
 	project.GET("/:id/tasks", handlers.ListProjectTasks)
+
+	worker := protected.Group("/worker")
+	worker.POST("/register", handlers.RegisterWorker)
+	worker.POST("/:workerId/heartbeat", handlers.WorkerHeartbeat)
+	worker.POST("/:workerId/tasks/next", handlers.ClaimNextTask)
+	worker.POST("/:workerId/tasks/:taskId/complete", handlers.CompleteTask)
+	worker.POST("/:workerId/tasks/:taskId/fail", handlers.FailTask)
 
 	r.Run(":8082")
 }

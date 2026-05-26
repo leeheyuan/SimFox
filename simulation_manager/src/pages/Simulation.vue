@@ -1,42 +1,114 @@
 <template>
-  <div style="padding: 20px;">
-    <h2>仿真运行</h2>
-    <el-alert title="提示" type="info" class="mb-4">
-      选择一个项目并运行仿真。支持实时查看仿真状态。
-    </el-alert>
-    <el-select v-model="selectedProject" placeholder="选择项目" style="width: 300px;" class="mb-4">
-      <el-option v-for="item in projects" :key="item.name" :label="item.name" :value="item.name" />
-    </el-select>
-    <el-button type="primary" @click="runSimulation">开始仿真</el-button>
-
-    <el-divider />
-    <div v-if="simulating">
-      <p>仿真中：{{ selectedProject }}</p>
-      <el-progress :percentage="progress" :status="progress === 100 ? 'success' : 'active'" />
+  <section class="page">
+    <div class="page-header">
+      <div>
+        <h2>Task Queue</h2>
+        <p>Submit, monitor, cancel, and retry SUMO jobs executed by private cloud workers.</p>
+      </div>
+      <el-button type="primary">Submit Task</el-button>
     </div>
-  </div>
+
+    <el-row :gutter="16" class="stats">
+      <el-col :span="6">
+        <el-card shadow="never">
+          <div class="label">Queued</div>
+          <strong>2</strong>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="never">
+          <div class="label">Running</div>
+          <strong>1</strong>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="never">
+          <div class="label">Succeeded</div>
+          <strong>8</strong>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="never">
+          <div class="label">Failed</div>
+          <strong>0</strong>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-table :data="tasks" style="width: 100%">
+      <el-table-column prop="id" label="Task ID" width="120" />
+      <el-table-column prop="project" label="Project" />
+      <el-table-column prop="status" label="Status" width="140" />
+      <el-table-column prop="worker" label="Worker" width="160" />
+      <el-table-column prop="progress" label="Progress" width="180">
+        <template #default="scope">
+          <el-progress :percentage="scope.row.progress" />
+        </template>
+      </el-table-column>
+      <el-table-column prop="submittedAt" label="Submitted At" width="180" />
+      <el-table-column label="Actions" width="260">
+        <template #default>
+          <el-button size="small">Logs</el-button>
+          <el-button size="small">Cancel</el-button>
+          <el-button size="small" type="primary">Retry</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-
-const selectedProject = ref('')
-const simulating = ref(false)
-const progress = ref(0)
-
-const projects = [
-  { name: '交叉口仿真A' },
-  { name: '公交信号优先' }
+const tasks = [
+  {
+    id: 1001,
+    project: 'Intersection baseline',
+    status: 'running',
+    worker: 'worker-a',
+    progress: 42,
+    submittedAt: '2026-05-24 09:10',
+  },
+  {
+    id: 1002,
+    project: 'Bus priority experiment',
+    status: 'queued',
+    worker: '-',
+    progress: 0,
+    submittedAt: '2026-05-24 09:12',
+  },
 ]
-
-function runSimulation() {
-  simulating.value = true
-  progress.value = 0
-  const timer = setInterval(() => {
-    progress.value += 10
-    if (progress.value >= 100) {
-      clearInterval(timer)
-    }
-  }, 500)
-}
 </script>
+
+<style scoped>
+.page {
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.stats {
+  margin-bottom: 16px;
+}
+
+.label {
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+strong {
+  font-size: 26px;
+}
+
+h2 {
+  margin: 0 0 6px;
+}
+
+p {
+  margin: 0;
+  color: #64748b;
+}
+</style>

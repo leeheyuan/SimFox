@@ -56,7 +56,14 @@
           >
             Cancel
           </el-button>
-          <el-button size="small" type="primary">Retry</el-button>
+          <el-button
+            size="small"
+            type="primary"
+            :disabled="!canRetryTask(scope.row.id)"
+            @click="handleRetry(scope.row.id)"
+          >
+            Retry
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -100,7 +107,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { cancelTask, listTasks, type TaskListItem } from '@/api/simulation'
+import { cancelTask, listTasks, retryTask, type TaskListItem } from '@/api/simulation'
 
 const loading = ref(false)
 const tasks = ref<TaskListItem[]>([])
@@ -178,6 +185,29 @@ async function handleCancel(taskId: number) {
     await refreshTasks()
   } catch (_error) {
     ElMessage.error('Failed to cancel task')
+  }
+}
+
+function canRetryTask(taskId: number) {
+  const task = tasks.value.find((item) => item.id === taskId)
+  if (!task) {
+    return false
+  }
+
+  return task.status === 'failed' || task.status === 'cancelled' || task.status === 'succeeded'
+}
+
+async function handleRetry(taskId: number) {
+  if (!canRetryTask(taskId)) {
+    return
+  }
+
+  try {
+    await retryTask(taskId)
+    ElMessage.success('Task queued for retry')
+    await refreshTasks()
+  } catch (_error) {
+    ElMessage.error('Failed to retry task')
   }
 }
 

@@ -1,0 +1,32 @@
+Loading net-file from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.net.xml' ... done (43ms).
+Loading additional-files from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\input_additional.add.xml' ... done (2ms).
+Loading additional-files from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.poly.xml' ... done (0ms).
+Warning: Missing green phase in tlLogic 'GS_cluster_1643085231_21432440_32500280_32500282', program '0' for tl-index 7.
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger.rou.xml'
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck.rou.xml'
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger_mw.rou.xml'
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck_mw.rou.xml'
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger_mwb.rou.xml'
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck_mwb.rou.xml'
+Loading route-files incrementally from 'E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/extra.rou.xml'
+Loading done.
+Simulation version 1.22.0 started with time: 0.00.
+Simulation ended at time: 1800.00.
+Reason: The final simulation step has been reached.
+Performance:
+ Duration: 15.32s
+ Real time factor: 117.501
+ UPS: 184803.055030
+Vehicles:
+ Inserted: 5428 (Loaded: 6889)
+ Running: 1148
+ Waiting: 1460
+Statistics (avg of 4280):
+ RouteLength: 2285.46
+ Speed: 21.63
+ Duration: 118.08
+ WaitingTime: 6.87
+ TimeLoss: 34.27
+ DepartDelay: 29.16
+DijkstraRouter answered 450 queries and explored 34.16 edges on average.
+DijkstraRouter spent 0.01s answering queries (0.01ms on average).

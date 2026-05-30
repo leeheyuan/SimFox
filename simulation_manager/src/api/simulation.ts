@@ -39,6 +39,23 @@ export interface ProjectListResponse {
   projects: ProjectListItem[]
 }
 
+export interface ProjectFileItem {
+  name: string
+  relativePath: string
+  absolutePath: string
+  extension: string
+  size: number
+  modifiedAt: string
+}
+
+export interface ProjectFilesResponse {
+  projectId: number
+  projectName: string
+  projectRoot: string
+  configPath: string
+  files: ProjectFileItem[]
+}
+
 export interface TaskListItem {
   id: number
   projectId: number
@@ -122,6 +139,10 @@ export function listProjects(): Promise<ProjectListResponse> {
   return simulationHttp.get('/project/projects')
 }
 
+export function listProjectFiles(projectId: number): Promise<ProjectFilesResponse> {
+  return simulationHttp.get(`/project/${projectId}/files`)
+}
+
 export function deleteProject(projectId: number): Promise<{ projectId: number }> {
   return simulationHttp.delete(`/project/${projectId}`)
 }
@@ -136,6 +157,10 @@ export function listResults(): Promise<ResultListResponse> {
 
 export function cancelTask(taskId: number): Promise<{ taskId: number; status: string }> {
   return simulationHttp.post(`/project/tasks/${taskId}/cancel`)
+}
+
+export function retryTask(taskId: number): Promise<{ taskId: number }> {
+  return simulationHttp.post(`/project/tasks/${taskId}/retry`)
 }
 
 export function listWorkers(): Promise<WorkerListResponse> {

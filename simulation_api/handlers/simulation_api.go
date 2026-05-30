@@ -38,6 +38,12 @@ var cancellableTaskStatuses = map[string]struct{}{
 	"running":     {},
 }
 
+var retryableTaskStatuses = map[string]struct{}{
+	"failed":    {},
+	"cancelled": {},
+	"succeeded": {},
+}
+
 type importManifest struct {
 	ConfigPath      string   `json:"configPath"`
 	DependencyPaths []string `json:"dependencyPaths"`
@@ -83,6 +89,15 @@ type ResultListItem struct {
 	OutputArtifactID *uint      `json:"outputArtifactId"`
 	LastError        string     `json:"lastError"`
 	GeneratedAt      *time.Time `json:"generatedAt"`
+}
+
+type ProjectFileItem struct {
+	Name         string `json:"name"`
+	RelativePath string `json:"relativePath"`
+	AbsolutePath string `json:"absolutePath"`
+	Extension    string `json:"extension"`
+	Size         int64  `json:"size"`
+	ModifiedAt   string `json:"modifiedAt"`
 }
 
 func GenerateProject(c *gin.Context) {
@@ -501,6 +516,74 @@ func ListResults(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"results": items})
 }
 
+func ListProjectFiles(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	projectID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
+		return
+	}
+
+	project, err := findProjectForUser(user.TenantID, uint(projectID))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询项目失败: " + err.Error()})
+		return
+	}
+
+	simConfig, err := ensureSimulationConfig(project)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询项目配置失败: " + err.Error()})
+		return
+	}
+
+	configPath := filepath.Clean(simConfig.ConfigPath)
+	projectRoot := filepath.Dir(configPath)
+	fileItems := make([]ProjectFileItem, 0, 16)
+
+	if err := filepath.Walk(projectRoot, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		relativePath, err := filepath.Rel(projectRoot, path)
+		if err != nil {
+			return err
+		}
+
+		fileItems = append(fileItems, ProjectFileItem{
+			Name:         info.Name(),
+			RelativePath: filepath.ToSlash(relativePath),
+			AbsolutePath: path,
+			Extension:    strings.TrimPrefix(strings.ToLower(filepath.Ext(info.Name())), "."),
+			Size:         info.Size(),
+			ModifiedAt:   info.ModTime().Format(time.RFC3339),
+		})
+		return nil
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取项目文件失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"projectId":   project.ID,
+		"projectName": project.Name,
+		"projectRoot": projectRoot,
+		"configPath":  configPath,
+		"files":       fileItems,
+	})
+}
+
 func CancelTask(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
@@ -565,6 +648,72 @@ func CancelTask(c *gin.Context) {
 		"message": "task cancelled",
 		"taskId":  task.ID,
 		"status":  "cancelled",
+	})
+}
+
+func RetryTask(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	taskID, err := strconv.ParseUint(c.Param("taskId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
+		return
+	}
+
+	var previousTask models.SimulationTask
+	if err := config.DB.
+		Joins("Project").
+		Where("simulation_tasks.id = ? AND Project.tenant_id = ?", uint(taskID), user.TenantID).
+		Preload("Project").
+		First(&previousTask).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询任务失败: " + err.Error()})
+		return
+	}
+
+	if _, allowed := retryableTaskStatuses[previousTask.Status]; !allowed {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "task cannot be retried in its current state"})
+		return
+	}
+
+	now := time.Now()
+	newTask := models.SimulationTask{
+		ProjectID:       previousTask.ProjectID,
+		ConfigID:        previousTask.ConfigID,
+		Status:          "queued",
+		Priority:        previousTask.Priority,
+		QueueName:       previousTask.QueueName,
+		DurationSeconds: previousTask.DurationSeconds,
+		Speed:           previousTask.Speed,
+		RuntimeImage:    previousTask.RuntimeImage,
+		ResourceCPU:     previousTask.ResourceCPU,
+		ResourceMemory:  previousTask.ResourceMemory,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+		SubmittedAt:     &now,
+	}
+
+	if err := config.DB.Create(&newTask).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建重试任务失败: " + err.Error()})
+		return
+	}
+
+	_ = config.DB.Model(&models.SimulationProject{}).
+		Where("id = ?", previousTask.ProjectID).
+		Updates(map[string]any{
+			"status":    "queued",
+			"update_at": now,
+		}).Error
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "task retried",
+		"taskId":  newTask.ID,
 	})
 }
 

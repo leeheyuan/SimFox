@@ -19,7 +19,7 @@
       <el-table-column prop="updatedAt" label="Updated At" width="180" />
       <el-table-column label="Actions" width="260">
         <template #default="scope">
-          <el-button size="small">Files</el-button>
+          <el-button size="small" @click="showFiles(scope.row)">Files</el-button>
           <el-button size="small" type="primary" @click="submitTask(scope.row)">Submit Task</el-button>
           <el-button size="small" type="danger" @click="removeProject(scope.row)">Delete</el-button>
         </template>
@@ -51,6 +51,52 @@
         <el-button type="primary" :loading="submittingTask" @click="confirmSubmitTask">Submit</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showFilesDialog" title="Project Files" width="760px">
+      <template v-if="selectedFilesProject">
+        <div class="files-meta">
+          <div><strong>Project:</strong> {{ selectedFilesProject.projectName }}</div>
+          <div><strong>Root:</strong> {{ selectedFilesProject.projectRoot }}</div>
+        </div>
+
+        <el-table v-loading="filesLoading" :data="selectedFilesProject.files" max-height="420">
+          <el-table-column prop="relativePath" label="Relative Path" min-width="280" />
+          <el-table-column prop="extension" label="Type" width="100" />
+          <el-table-column prop="size" label="Size" width="120">
+            <template #default="scope">
+              {{ formatFileSize(scope.row.size) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="modifiedAt" label="Modified" width="180">
+            <template #default="scope">
+              {{ formatDate(scope.row.modifiedAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="Actions" width="120">
+            <template #default="scope">
+              <el-button
+                size="small"
+                :disabled="!canOpenLocalPath"
+                @click="openProjectPath(scope.row.absolutePath)"
+              >
+                Open
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+
+      <template #footer>
+        <el-button @click="showFilesDialog = false">Close</el-button>
+        <el-button
+          v-if="selectedFilesProject?.projectRoot && canOpenLocalPath"
+          type="primary"
+          @click="openProjectPath(selectedFilesProject.projectRoot)"
+        >
+          Open Folder
+        </el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -61,7 +107,9 @@ import {
   deleteProject,
   enqueueProjectTask,
   importProjectFromConfig,
+  listProjectFiles,
   listProjects,
+  type ProjectFilesResponse,
   type ProjectListItem,
 } from '@/api/simulation'
 
@@ -71,8 +119,12 @@ const loading = ref(false)
 const importing = ref(false)
 const submittingTask = ref(false)
 const showSubmitDialog = ref(false)
+const showFilesDialog = ref(false)
+const filesLoading = ref(false)
 const projects = ref<ProjectListItem[]>([])
 const selectedProject = ref<ProjectListItem | null>(null)
+const selectedFilesProject = ref<ProjectFilesResponse | null>(null)
+const canOpenLocalPath = computed(() => Boolean(window.simfox?.openPath))
 const submitForm = ref({
   simulationTime: 60,
   speed: 1,
@@ -310,6 +362,27 @@ async function confirmSubmitTask() {
   }
 }
 
+async function showFiles(project: ProjectListItem) {
+  showFilesDialog.value = true
+  filesLoading.value = true
+  selectedFilesProject.value = {
+    projectId: project.id,
+    projectName: project.name,
+    projectRoot: '',
+    configPath: '',
+    files: [],
+  }
+
+  try {
+    selectedFilesProject.value = await listProjectFiles(project.id)
+  } catch (_error) {
+    showFilesDialog.value = false
+    ElMessage.error('Failed to load project files')
+  } finally {
+    filesLoading.value = false
+  }
+}
+
 async function removeProject(project: ProjectListItem) {
   try {
     await ElMessageBox.confirm(
@@ -338,6 +411,18 @@ async function removeProject(project: ProjectListItem) {
 function closeSubmitDialog() {
   showSubmitDialog.value = false
   selectedProject.value = null
+}
+
+async function openProjectPath(targetPath: string) {
+  if (!window.simfox?.openPath) {
+    return
+  }
+
+  try {
+    await window.simfox.openPath(targetPath)
+  } catch (_error) {
+    ElMessage.error('Failed to open path')
+  }
 }
 
 function relativeFilePath(file: File): string {
@@ -372,6 +457,34 @@ async function resolveConfigFile(
     relativePath: `${stripExtension(netFile.relativePath)}.sumocfg`,
   }
 }
+
+function formatFileSize(value: number) {
+  if (value < 1024) {
+    return `${value} B`
+  }
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KB`
+  }
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatDate(value?: string | null) {
+  if (!value) {
+    return '-'
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
 </script>
 
 <style scoped>
@@ -398,6 +511,13 @@ async function resolveConfigFile(
 
 .hidden-input {
   display: none;
+}
+
+.files-meta {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+  color: #334155;
 }
 
 h2 {

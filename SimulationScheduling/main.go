@@ -47,9 +47,9 @@ func main() {
 	s := &scheduler{
 		portManager:  port.NewPortManager(8000, 9000),
 		pollInterval: durationFromEnv("SCHEDULER_POLL_INTERVAL", 3*time.Second),
-		maxWorkers:   intFromEnv("SCHEDULER_MAX_WORKERS", 2),
+		maxWorkers:   intFromEnv("SCHEDULER_MAX_WORKERS", 0),
 		pythonCmd:    stringFromEnv("SIM_PYTHON_CMD", "py"),
-		scriptPath:   stringFromEnv("SIM_SERVER_ENTRY", "../sim_server/sim_server.py"),
+		scriptPath:   stringFromEnv("SIM_SERVER_ENTRY", "../worker-agent/main.py"),
 		httpAddr:     stringFromEnv("SCHEDULER_HTTP_ADDR", ":8090"),
 		running:      make(map[uint]runtimeTask),
 	}
@@ -61,7 +61,9 @@ func main() {
 	defer ticker.Stop()
 
 	for {
-		s.dispatchAvailableTasks()
+		if s.maxWorkers > 0 {
+			s.dispatchAvailableTasks()
+		}
 		<-ticker.C
 	}
 }
@@ -165,7 +167,7 @@ func (s *scheduler) executeTask(taskID uint) {
 		Where("id = ?", task.ID).
 		Updates(map[string]any{
 			"monitor_port": task.MonitorPort,
-			"tra_ci_port":  task.TraCIPort,
+			"traci_port":   task.TraCIPort,
 			"started_at":   now,
 			"updated_at":   now,
 		}).Error; err != nil {

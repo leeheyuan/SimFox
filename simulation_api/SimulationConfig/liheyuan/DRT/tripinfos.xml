@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-05-30 16:36:57 by Eclipse SUMO sumo Version 1.22.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\DRT/osm.net.xml"/>
+        <route-files value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\DRT/rides.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\DRT/drt.rou.xml"/>
+        <additional-files value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\DRT/drtstops.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\DRT/drt.pois.xml"/>
+    </input>
+
+    <output>
+        <human-readable-time value="false"/>
+        <tripinfo-output value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\tripinfos.xml"/>
+    </output>
+
+    <time>
+        <end value="2400"/>
+        <step-length value="0.2"/>
+    </time>
+
+    <processing>
+        <tls.all-off value="true"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.statistics value="true"/>
+    </report>
+
+    <gui_only>
+        <gui-settings-file value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\DRT\DRT/gv.xml"/>
+        <game value="true"/>
+        <game.mode value="drt"/>
+        <start value="true"/>
+    </gui_only>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+</tripinfos>

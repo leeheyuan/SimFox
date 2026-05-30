@@ -34,7 +34,8 @@ Worker Agent
 | `simulation_manager/` | Vue management console for projects, tasks, results, cluster, settings | Main frontend |
 | `simulation_api/` | Go platform API for projects, tasks, worker endpoints | Main backend |
 | `SimulationScheduling/` | Existing local scheduler; to be replaced by worker-agent scheduling | Transitional |
-| `sim_server/` | Existing Python SUMO runner; should become `worker-agent` | Transitional |
+| `worker-agent/` | Python private-cloud worker that registers, heartbeats, claims tasks, and runs SUMO locally | Main execution node |
+| `sim_server/` | Deprecated local WebSocket-era SUMO runner kept only for short-term reference | Transitional |
 | `models/` | Shared GORM models for tenants, projects, tasks, artifacts, workers, logs | Main backend |
 | `SumoConfig/`, `typeDef/`, `utils/` | SUMO config parsing and shared helpers | Keep |
 
@@ -223,4 +224,4 @@ POST /worker/:workerId/tasks/:taskId/complete
 POST /worker/:workerId/tasks/:taskId/fail
 ```
 
-The next migration step is to convert `sim_server/` into a worker agent that uses these endpoints.
+The first `worker-agent/` version is now in place and uses these endpoints as its control loop.

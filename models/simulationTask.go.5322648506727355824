@@ -15,13 +15,13 @@ type SimulationTask struct {
 	Progress         int     `gorm:"not null;default:0"`
 	DurationSeconds  int32   `gorm:"not null;default:60"`
 	Speed            float64 `gorm:"not null;default:1"`
-	MonitorPort      int     `gorm:"column:monitor_port"`
-	TraCIPort        int     `gorm:"column:traci_port"`
-	RuntimeImage     string  `gorm:"size:255"`
-	ResourceCPU      string  `gorm:"size:40"`
-	ResourceMemory   string  `gorm:"size:40"`
-	LogURL           string  `gorm:"size:500"`
-	LastError        string  `gorm:"size:500"`
+	MonitorPort      int    `gorm:"column:monitor_port"`
+	TraCIPort        int    `gorm:"column:traci_port"`
+	RuntimeImage     string `gorm:"size:255"`
+	ResourceCPU      string `gorm:"size:40"`
+	ResourceMemory   string `gorm:"size:40"`
+	LogURL           string `gorm:"size:500"`
+	LastError        string `gorm:"size:500"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	SubmittedAt      *time.Time

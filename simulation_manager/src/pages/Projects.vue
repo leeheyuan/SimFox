@@ -21,7 +21,7 @@
         <template #default="scope">
           <el-button size="small">Files</el-button>
           <el-button size="small" type="primary" @click="submitTask(scope.row)">Submit Task</el-button>
-          <el-button size="small" type="danger">Delete</el-button>
+          <el-button size="small" type="danger" @click="removeProject(scope.row)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -33,19 +33,50 @@
       accept=".sumocfg,.net.xml"
       @change="handleImportSelection"
     />
+
+    <el-dialog v-model="showSubmitDialog" title="Submit Task" width="420px">
+      <el-form label-position="top" @submit.prevent>
+        <el-form-item label="Project">
+          <el-input :model-value="selectedProject?.name ?? ''" disabled />
+        </el-form-item>
+        <el-form-item label="Simulation Time (seconds)" required>
+          <el-input-number v-model="submitForm.simulationTime" :min="1" :max="86400" />
+        </el-form-item>
+        <el-form-item label="Speed" required>
+          <el-input-number v-model="submitForm.speed" :min="0.1" :max="100" :step="0.1" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeSubmitDialog">Cancel</el-button>
+        <el-button type="primary" :loading="submittingTask" @click="confirmSubmitTask">Submit</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { importProjectFromConfig, listProjects, type ProjectListItem } from '@/api/simulation'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  deleteProject,
+  enqueueProjectTask,
+  importProjectFromConfig,
+  listProjects,
+  type ProjectListItem,
+} from '@/api/simulation'
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const search = ref('')
 const loading = ref(false)
 const importing = ref(false)
+const submittingTask = ref(false)
+const showSubmitDialog = ref(false)
 const projects = ref<ProjectListItem[]>([])
+const selectedProject = ref<ProjectListItem | null>(null)
+const submitForm = ref({
+  simulationTime: 60,
+  speed: 1,
+})
 
 const filteredProjects = computed(() =>
   projects.value.filter((project) => project.name.toLowerCase().includes(search.value.toLowerCase())),
@@ -249,8 +280,64 @@ function stripExtension(value: string): string {
   return value.replace(/\.[^.]+$/, '')
 }
 
-function submitTask(_project: ProjectListItem) {
-  ElMessage.info('Task submission will be wired next')
+function submitTask(project: ProjectListItem) {
+  selectedProject.value = project
+  submitForm.value = {
+    simulationTime: 60,
+    speed: 1,
+  }
+  showSubmitDialog.value = true
+}
+
+async function confirmSubmitTask() {
+  if (!selectedProject.value) {
+    return
+  }
+
+  submittingTask.value = true
+  try {
+    await enqueueProjectTask(selectedProject.value.id, {
+      simulationTime: submitForm.value.simulationTime,
+      speed: submitForm.value.speed,
+    })
+    ElMessage.success('Task submitted successfully')
+    closeSubmitDialog()
+    await refreshProjects()
+  } catch (_error) {
+    ElMessage.error('Failed to submit task')
+  } finally {
+    submittingTask.value = false
+  }
+}
+
+async function removeProject(project: ProjectListItem) {
+  try {
+    await ElMessageBox.confirm(
+      `Delete project "${project.name}"? Completed tasks and uploaded project records will be removed.`,
+      'Delete Project',
+      {
+        type: 'warning',
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+      },
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteProject(project.id)
+    ElMessage.success('Project deleted')
+    await refreshProjects()
+  } catch (error: any) {
+    const message = error?.response?.data?.error || 'Failed to delete project'
+    ElMessage.error(message)
+  }
+}
+
+function closeSubmitDialog() {
+  showSubmitDialog.value = false
+  selectedProject.value = null
 }
 
 function relativeFilePath(file: File): string {

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-05-30 18:10:54 by Eclipse SUMO sumo Version 1.22.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.net.xml"/>
+        <route-files value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger_mw.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck_mw.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger_mwb.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck_mwb.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/extra.rou.xml"/>
+        <additional-files value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\input_additional.add.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.poly.xml"/>
+    </input>
+
+    <time>
+        <end value="1800"/>
+        <step-length value="0.5"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <time-to-teleport value="0"/>
+    </processing>
+
+    <routing>
+        <device.rerouting.adaptation-steps value="180"/>
+    </routing>
+
+    <report>
+        <verbose value="true"/>
+        <xml-validation value="never"/>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <gui_only>
+        <gui-settings-file value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.view.xml"/>
+    </gui_only>
+
+</sumoConfiguration>
+-->
+
+<tlsStates xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tlsstates_file.xsd">
+    <tlsState time="0.00" id="GS_cluster_1643085231_21432440_32500280_32500282" programID="0" phase="0" state="rrrrrrrryyyyryrrr"/>
+    <tlsState time="0.00" id="GS_cluster_21432412_32500298" programID="0" phase="0" state="yrrrrryyy"/>
+    <tlsState time="4.00" id="GS_cluster_1643085231_21432440_32500280_32500282" programID="0" phase="1" state="rrrrrrrrrrrrrrrrr"/>
+    <tlsState time="4.00" id="GS_cluster_21432412_32500298" programID="0" phase="1" state="rrrrrrrrr"/>
+    <tlsState time="6.00" id="GS_cluster_1643085231_21432440_32500280_32500282" programID="0" phase="2" state="rrrrGGrrrrrrrGGGr"/>
+    <tlsState time="6.00" id="GS_cluster_21432412_32500298" programID="0" phase="2" state="GGGGGrrrr"/>
+</tlsStates>

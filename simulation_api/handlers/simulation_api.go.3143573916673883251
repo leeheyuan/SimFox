@@ -74,15 +74,15 @@ type TaskListItem struct {
 }
 
 type ResultListItem struct {
-	TaskID           uint       `json:"taskId"`
-	ProjectID        uint       `json:"projectId"`
-	ProjectName      string     `json:"projectName"`
-	Status           string     `json:"status"`
-	Progress         int        `json:"progress"`
-	LogURL           string     `json:"logUrl"`
-	OutputArtifactID *uint      `json:"outputArtifactId"`
-	LastError        string     `json:"lastError"`
-	GeneratedAt      *time.Time `json:"generatedAt"`
+	TaskID          uint       `json:"taskId"`
+	ProjectID       uint       `json:"projectId"`
+	ProjectName     string     `json:"projectName"`
+	Status          string     `json:"status"`
+	Progress        int        `json:"progress"`
+	LogURL          string     `json:"logUrl"`
+	OutputArtifactID *uint     `json:"outputArtifactId"`
+	LastError       string     `json:"lastError"`
+	GeneratedAt     *time.Time `json:"generatedAt"`
 }
 
 func GenerateProject(c *gin.Context) {
@@ -186,23 +186,10 @@ func ListProjects(c *gin.Context) {
 
 	items := make([]ProjectListItem, 0, len(projects))
 	for _, project := range projects {
-		status := project.Status
-		if derivedStatus, err := deriveProjectStatus(project.ID); err == nil && derivedStatus != "" {
-			status = derivedStatus
-			if derivedStatus != project.Status {
-				_ = config.DB.Model(&models.SimulationProject{}).
-					Where("id = ?", project.ID).
-					Updates(map[string]any{
-						"status":    derivedStatus,
-						"update_at": time.Now(),
-					}).Error
-			}
-		}
-
 		items = append(items, ProjectListItem{
 			ID:        project.ID,
 			Name:      project.Name,
-			Status:    status,
+			Status:    project.Status,
 			CreatedAt: project.CreatedAt,
 			UpdatedAt: project.UpdateAt,
 		})

@@ -1,0 +1,13 @@
+{
+  "platform_url": "http://127.0.0.1:8082",
+  "token": "Bearer replace-me",
+  "worker_name": "sim-node-01",
+  "address": "127.0.0.1",
+  "queue_name": "default",
+  "labels_json": "{\"region\":\"local\",\"runtime\":\"sumo\"}",
+  "max_concurrency": 1,
+  "sumo_bin": "sumo",
+  "work_dir": "E:/SimFox/worker-agent/workdir",
+  "poll_interval_sec": 3,
+  "heartbeat_interval_sec": 10
+}

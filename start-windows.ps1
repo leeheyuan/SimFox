@@ -48,7 +48,9 @@ function Start-SimFoxService {
     [string]$RelativePath,
 
     [Parameter(Mandatory = $true)]
-    [int]$Port
+    [int]$Port,
+
+    [string]$ExtraEnv = ""
   )
 
   $servicePath = Join-Path $workspaceRoot $RelativePath
@@ -56,7 +58,11 @@ function Start-SimFoxService {
     throw "$Name path was not found: $servicePath"
   }
 
-  $command = "cd /d $servicePath && powershell -Command `"& { `$env:SIMFOX_MYSQL_DSN='$resolvedDsn'; go run . }`""
+  $envPrefix = "`$env:SIMFOX_MYSQL_DSN='$resolvedDsn'; "
+  if ($ExtraEnv) {
+    $envPrefix += $ExtraEnv + "; "
+  }
+  $command = "cd /d $servicePath && powershell -Command `"& { $envPrefix go run . }`""
   Start-Process cmd.exe -WindowStyle Hidden -ArgumentList "/c", $command | Out-Null
   Write-Host "Started $Name (target port $Port)"
 }
@@ -64,7 +70,7 @@ function Start-SimFoxService {
 Start-SimFoxService -Name "user_auth" -RelativePath "user_auth" -Port 8080
 Start-SimFoxService -Name "config_Sever" -RelativePath "config_Sever" -Port 8081
 Start-SimFoxService -Name "simulation_api" -RelativePath "simulation_api" -Port 8082
-Start-SimFoxService -Name "SimulationScheduling" -RelativePath "SimulationScheduling" -Port 8090
+Start-SimFoxService -Name "SimulationScheduling" -RelativePath "SimulationScheduling" -Port 8090 -ExtraEnv "`$env:SCHEDULER_MAX_WORKERS='0'"
 
 Start-Sleep -Seconds 6
 

@@ -1,0 +1,14 @@
+{
+  "platform_url": "http://127.0.0.1:8082",
+  "token": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsaWhleXVhbiIsImV4cCI6MTc4MDE5MzE0NH0.SgZBq4HoQS4t-2Tyut-9P2ZvyeY47JFkDV0UIZ3Qvts",
+  "worker_name": "sim-node-local-01",
+  "address": "127.0.0.1",
+  "queue_name": "default",
+  "labels_json": "{\"region\":\"local\",\"runtime\":\"sumo\",\"host\":\"desktop\"}",
+  "max_concurrency": 1,
+  "sumo_bin": "sumo",
+  "workspace_root": "E:/SimFox",
+  "work_dir": "E:/SimFox/worker-agent/workdir",
+  "poll_interval_sec": 3,
+  "heartbeat_interval_sec": 10
+}

@@ -34,6 +34,24 @@ type FailTaskRequest struct {
 	LogURL string `json:"logUrl"`
 }
 
+type TaskProgressRequest struct {
+	Progress int `json:"progress"`
+}
+
+type WorkerListItem struct {
+	ID             uint       `json:"id"`
+	Name           string     `json:"name"`
+	Status         string     `json:"status"`
+	Address        string     `json:"address"`
+	QueueName      string     `json:"queueName"`
+	MaxConcurrency int        `json:"maxConcurrency"`
+	RunningTasks   int        `json:"runningTasks"`
+	LastHeartbeat  *time.Time `json:"lastHeartbeat"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
+}
+
+const workerOfflineTimeout = 30 * time.Second
+
 func RegisterWorker(c *gin.Context) {
 	user, ok := currentUser(c)
 	if !ok {
@@ -94,6 +112,41 @@ func RegisterWorker(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"workerId": worker.ID})
+}
+
+func ListWorkers(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	var workers []models.WorkerNode
+	if err := config.DB.
+		Where("tenant_id = ?", user.TenantID).
+		Order("updated_at desc, id asc").
+		Find(&workers).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "query workers failed: " + err.Error()})
+		return
+	}
+
+	items := make([]WorkerListItem, 0, len(workers))
+	now := time.Now()
+	for _, worker := range workers {
+		status := effectiveWorkerStatus(worker, now)
+		items = append(items, WorkerListItem{
+			ID:             worker.ID,
+			Name:           worker.Name,
+			Status:         status,
+			Address:        worker.Address,
+			QueueName:      worker.QueueName,
+			MaxConcurrency: worker.MaxConcurrency,
+			RunningTasks:   worker.RunningTasks,
+			LastHeartbeat:  worker.LastHeartbeat,
+			UpdatedAt:      worker.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"workers": items})
 }
 
 func WorkerHeartbeat(c *gin.Context) {
@@ -170,6 +223,11 @@ func ClaimNextTask(c *gin.Context) {
 		return
 	}
 
+	if err := syncProjectStatus(task.ProjectID, time.Now()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update project status failed: " + err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"task": task})
 }
 
@@ -183,15 +241,56 @@ func CompleteTask(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req)
 
 	now := time.Now()
-	if err := config.DB.Model(&task).Updates(map[string]any{
-		"status":             "succeeded",
-		"progress":           100,
-		"output_artifact_id": req.OutputArtifactID,
-		"log_url":            req.LogURL,
-		"ended_at":           now,
-		"updated_at":         now,
-	}).Error; err != nil {
+	if err := config.DB.Model(&models.SimulationTask{}).
+		Where("id = ? AND worker_id = ?", task.ID, task.WorkerID).
+		Updates(map[string]any{
+			"status":             "succeeded",
+			"progress":           100,
+			"output_artifact_id": req.OutputArtifactID,
+			"log_url":            req.LogURL,
+			"ended_at":           now,
+			"updated_at":         now,
+		}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "complete task failed: " + err.Error()})
+		return
+	}
+
+	if err := syncProjectStatus(task.ProjectID, now); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update project status failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func UpdateTaskProgress(c *gin.Context) {
+	task, ok := findWorkerTask(c)
+	if !ok {
+		return
+	}
+
+	var req TaskProgressRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	progress := req.Progress
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 99 {
+		progress = 99
+	}
+
+	now := time.Now()
+	if err := config.DB.Model(&models.SimulationTask{}).
+		Where("id = ? AND worker_id = ?", task.ID, task.WorkerID).
+		Updates(map[string]any{
+			"progress":   progress,
+			"updated_at": now,
+		}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update progress failed: " + err.Error()})
 		return
 	}
 
@@ -211,14 +310,21 @@ func FailTask(c *gin.Context) {
 	}
 
 	now := time.Now()
-	if err := config.DB.Model(&task).Updates(map[string]any{
-		"status":     "failed",
-		"last_error": req.Error,
-		"log_url":    req.LogURL,
-		"ended_at":   now,
-		"updated_at": now,
-	}).Error; err != nil {
+	if err := config.DB.Model(&models.SimulationTask{}).
+		Where("id = ? AND worker_id = ?", task.ID, task.WorkerID).
+		Updates(map[string]any{
+			"status":     "failed",
+			"last_error": req.Error,
+			"log_url":    req.LogURL,
+			"ended_at":   now,
+			"updated_at": now,
+		}).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "fail task failed: " + err.Error()})
+		return
+	}
+
+	if err := syncProjectStatus(task.ProjectID, now); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update project status failed: " + err.Error()})
 		return
 	}
 
@@ -241,4 +347,73 @@ func findWorkerTask(c *gin.Context) (models.SimulationTask, bool) {
 		return models.SimulationTask{}, false
 	}
 	return task, true
+}
+
+func effectiveWorkerStatus(worker models.WorkerNode, now time.Time) string {
+	if worker.LastHeartbeat == nil {
+		return "offline"
+	}
+	if now.Sub(*worker.LastHeartbeat) > workerOfflineTimeout {
+		return "offline"
+	}
+	if worker.Status == "" {
+		return "offline"
+	}
+	return worker.Status
+}
+
+func syncProjectStatus(projectID uint, now time.Time) error {
+	projectStatus, err := deriveProjectStatus(projectID)
+	if err != nil {
+		return err
+	}
+
+	return config.DB.Model(&models.SimulationProject{}).
+		Where("id = ?", projectID).
+		Updates(map[string]any{
+			"status":    projectStatus,
+			"update_at": now,
+		}).Error
+}
+
+func deriveProjectStatus(projectID uint) (string, error) {
+	var tasks []models.SimulationTask
+	if err := config.DB.
+		Where("project_id = ?", projectID).
+		Order("created_at desc").
+		Find(&tasks).Error; err != nil {
+		return "", err
+	}
+
+	projectStatus := "ready"
+	hasSucceeded := false
+	hasFailed := false
+	hasQueued := false
+	hasRunning := false
+
+	for _, task := range tasks {
+		switch task.Status {
+		case "running":
+			hasRunning = true
+		case "queued", "dispatching":
+			hasQueued = true
+		case "failed":
+			hasFailed = true
+		case "succeeded":
+			hasSucceeded = true
+		}
+	}
+
+	switch {
+	case hasRunning:
+		projectStatus = "running"
+	case hasQueued:
+		projectStatus = "queued"
+	case hasFailed:
+		projectStatus = "failed"
+	case hasSucceeded:
+		projectStatus = "succeeded"
+	}
+
+	return projectStatus, nil
 }

@@ -85,6 +85,7 @@ type ResultListItem struct {
 	ProjectName      string     `json:"projectName"`
 	Status           string     `json:"status"`
 	Progress         int        `json:"progress"`
+	ConfigPath       string     `json:"configPath"`
 	LogURL           string     `json:"logUrl"`
 	OutputArtifactID *uint      `json:"outputArtifactId"`
 	LastError        string     `json:"lastError"`
@@ -492,6 +493,7 @@ func ListResults(c *gin.Context) {
 		Joins("Project").
 		Where("Project.tenant_id = ? AND simulation_tasks.status IN ?", user.TenantID, []string{"succeeded", "failed", "cancelled"}).
 		Order("simulation_tasks.ended_at desc, simulation_tasks.updated_at desc").
+		Preload("Config").
 		Preload("Project").
 		Find(&tasks).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询结果失败: " + err.Error()})
@@ -506,6 +508,7 @@ func ListResults(c *gin.Context) {
 			ProjectName:      task.Project.Name,
 			Status:           task.Status,
 			Progress:         task.Progress,
+			ConfigPath:       task.Config.ConfigPath,
 			LogURL:           task.LogURL,
 			OutputArtifactID: task.OutputArtifactID,
 			LastError:        task.LastError,
@@ -683,21 +686,7 @@ func RetryTask(c *gin.Context) {
 	}
 
 	now := time.Now()
-	newTask := models.SimulationTask{
-		ProjectID:       previousTask.ProjectID,
-		ConfigID:        previousTask.ConfigID,
-		Status:          "queued",
-		Priority:        previousTask.Priority,
-		QueueName:       previousTask.QueueName,
-		DurationSeconds: previousTask.DurationSeconds,
-		Speed:           previousTask.Speed,
-		RuntimeImage:    previousTask.RuntimeImage,
-		ResourceCPU:     previousTask.ResourceCPU,
-		ResourceMemory:  previousTask.ResourceMemory,
-		CreatedAt:       now,
-		UpdatedAt:       now,
-		SubmittedAt:     &now,
-	}
+	newTask := buildQueuedTaskFromPrevious(previousTask, now)
 
 	if err := config.DB.Create(&newTask).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建重试任务失败: " + err.Error()})
@@ -715,6 +704,24 @@ func RetryTask(c *gin.Context) {
 		"message": "task retried",
 		"taskId":  newTask.ID,
 	})
+}
+
+func buildQueuedTaskFromPrevious(previousTask models.SimulationTask, now time.Time) models.SimulationTask {
+	return models.SimulationTask{
+		ProjectID:       previousTask.ProjectID,
+		ConfigID:        previousTask.ConfigID,
+		Status:          "queued",
+		Priority:        previousTask.Priority,
+		QueueName:       previousTask.QueueName,
+		DurationSeconds: previousTask.DurationSeconds,
+		Speed:           previousTask.Speed,
+		RuntimeImage:    previousTask.RuntimeImage,
+		ResourceCPU:     previousTask.ResourceCPU,
+		ResourceMemory:  previousTask.ResourceMemory,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+		SubmittedAt:     &now,
+	}
 }
 
 func DeleteProject(c *gin.Context) {
@@ -752,6 +759,19 @@ func DeleteProject(c *gin.Context) {
 	}
 
 	if err := config.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("project_id = ?", project.ID).Delete(&models.SignalOptimizationSuggestion{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("task_id IN (?)",
+			tx.Model(&models.SimulationTask{}).Select("id").Where("project_id = ?", project.ID),
+		).Delete(&models.SimulationResult{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("task_id IN (?)",
+			tx.Model(&models.SimulationTask{}).Select("id").Where("project_id = ?", project.ID),
+		).Delete(&models.TaskLog{}).Error; err != nil {
+			return err
+		}
 		if err := tx.Where("project_id = ?", project.ID).Delete(&models.SimulationTask{}).Error; err != nil {
 			return err
 		}

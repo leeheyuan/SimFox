@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<add>
+  <tlLogic id="GS_cluster_1643085231_21432440_32500280_32500282" type="static" programID="0" offset="0">
+    <phase duration="4" state="rrrrrrrryyyyryrrr"></phase>
+    <phase duration="2" state="rrrrrrrrrrrrrrrrr"></phase>
+    <phase duration="10010.00" state="rrrrGGrrrrrrrGGGr"></phase>
+    <phase duration="4" state="rrrryyrrrrrrryyyr"></phase>
+    <phase duration="2" state="rrrrrrrrrrrrrrrrr"></phase>
+    <phase duration="10010.00" state="rrrrrrGrrrrrrrrrG"></phase>
+    <phase duration="4" state="rrrrrryrrrrrrrrry"></phase>
+    <phase duration="2" state="rrrrrrrrrrrrrrrrr"></phase>
+    <phase duration="10010.00" state="GGGGGrrrrrrrrrrrr"></phase>
+    <phase duration="4" state="yyyyyrrrrrrrrrrrr"></phase>
+    <phase duration="2" state="rrrrrrrrrrrrrrrrr"></phase>
+    <phase duration="10010.00" state="rrrrrrrrGGGGrGrrr"></phase>
+  </tlLogic>
+  <tlLogic id="GS_cluster_21432412_32500298" type="static" programID="0" offset="0">
+    <phase duration="4" state="yrrrrryyy"></phase>
+    <phase duration="2" state="rrrrrrrrr"></phase>
+    <phase duration="10010.00" state="GGGGGrrrr"></phase>
+    <phase duration="4" state="yyyyyrrrr"></phase>
+    <phase duration="2" state="rrrrrrrrr"></phase>
+    <phase duration="10000" state="rrrrrGrrr"></phase>
+    <phase duration="4" state="rrrrryrrr"></phase>
+    <phase duration="2" state="rrrrrrrrr"></phase>
+    <phase duration="10010.00" state="GrrrrrGGG"></phase>
+  </tlLogic>
+</add>

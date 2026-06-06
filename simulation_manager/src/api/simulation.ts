@@ -87,6 +87,7 @@ export interface ResultListItem {
   projectName: string
   status: string
   progress: number
+  configPath: string
   logUrl: string
   outputArtifactId?: number | null
   lastError: string
@@ -95,6 +96,81 @@ export interface ResultListItem {
 
 export interface ResultListResponse {
   results: ResultListItem[]
+}
+
+export interface SignalOptimizationMetrics {
+  tripCount: number
+  averageDuration: number
+  averageWaitingTime: number
+  averageTimeLoss: number
+  candidateSignals: Array<{
+    id: string
+    programId: string
+    sourceFile: string
+    phaseCount: number
+    cycleLength: number
+  }>
+}
+
+export interface SignalOptimizationAnalysis {
+  mode: string
+  congestedJunctions: string[]
+  reasons: string[]
+  recommendationLevel: string
+}
+
+export interface SignalOptimizationProposal {
+  adjustments: Array<{
+    junctionId: string
+    programId: string
+    sourceFile: string
+    beforeCycle: number
+    afterCycle: number
+    phaseChanges: Array<{
+      index: number
+      state: string
+      oldDuration: number
+      newDuration: number
+      comment: string
+    }>
+  }>
+  nextStep: string
+}
+
+export interface SignalOptimizationSuggestion {
+  taskId: number
+  projectId: number
+  rerunTaskId?: number | null
+  rerunTaskStatus?: string
+  status: string
+  engine: string
+  summary: string
+  metrics: SignalOptimizationMetrics
+  analysis: SignalOptimizationAnalysis
+  proposal: SignalOptimizationProposal
+  comparison?: {
+    baselineTaskId: number
+    optimizedTaskId: number
+    optimizedTaskStatus: string
+    baselineMetrics: SignalOptimizationMetrics
+    optimizedMetrics?: SignalOptimizationMetrics
+    delta?: {
+      tripCountDelta: number
+      averageDurationDelta: number
+      averageDurationDeltaPercent: number
+      averageWaitingTimeDelta: number
+      averageWaitingTimeDeltaPercent: number
+      averageTimeLossDelta: number
+      averageTimeLossDeltaPercent: number
+    }
+  } | null
+  proposedConfigPath: string
+  appliedConfigPath: string
+  appliedSignalFile: string
+  rejectedReason: string
+  createdAt: string
+  updatedAt: string
+  reviewedAt?: string | null
 }
 
 export interface WorkerListItem {
@@ -119,6 +195,11 @@ export interface RegisterWorkerPayload {
   queueName: string
   labelsJson: string
   maxConcurrency: number
+}
+
+export interface RegisterWorkerResponse {
+  workerId: number
+  workerSecret: string
 }
 
 export interface ImportProjectPayload {
@@ -155,6 +236,18 @@ export function listResults(): Promise<ResultListResponse> {
   return simulationHttp.get('/project/results')
 }
 
+export function getSignalOptimization(taskId: number): Promise<SignalOptimizationSuggestion> {
+  return simulationHttp.get(`/project/results/${taskId}/signal-optimization`)
+}
+
+export function acceptSignalOptimization(taskId: number): Promise<SignalOptimizationSuggestion> {
+  return simulationHttp.post(`/project/results/${taskId}/signal-optimization/accept`)
+}
+
+export function rejectSignalOptimization(taskId: number, reason = ''): Promise<SignalOptimizationSuggestion> {
+  return simulationHttp.post(`/project/results/${taskId}/signal-optimization/reject`, { reason })
+}
+
 export function cancelTask(taskId: number): Promise<{ taskId: number; status: string }> {
   return simulationHttp.post(`/project/tasks/${taskId}/cancel`)
 }
@@ -167,7 +260,7 @@ export function listWorkers(): Promise<WorkerListResponse> {
   return simulationHttp.get('/worker/list')
 }
 
-export function registerWorker(payload: RegisterWorkerPayload): Promise<{ workerId: number }> {
+export function registerWorker(payload: RegisterWorkerPayload): Promise<RegisterWorkerResponse> {
   return simulationHttp.post('/worker/register', payload)
 }
 

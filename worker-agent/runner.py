@@ -27,7 +27,7 @@ def run_sumo_task(
     task_dir.mkdir(parents=True, exist_ok=True)
     log_path = task_dir / "sumo.log"
 
-    command = [sumo_bin, "-c", config_path]
+    command = [sumo_bin, "-c", config_path, "--tripinfo-output", "tripinfos.xml"]
     started = monotonic()
     with log_path.open("w", encoding="utf-8") as log_file:
         try:

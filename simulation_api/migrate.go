@@ -20,6 +20,7 @@ func autoMigrate() error {
 		&models.SimulationProject{},
 		&models.SimulationConfig{},
 		&models.SimulationResult{},
+		&models.SignalOptimizationSuggestion{},
 		&models.Simulation{},
 	); err != nil {
 		return err

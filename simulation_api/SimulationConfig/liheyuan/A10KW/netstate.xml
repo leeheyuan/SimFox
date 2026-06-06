@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-05-30 20:03:13 by Eclipse SUMO sumo Version 1.22.0
+<!-- generated on 2026-06-03 22:31:03 by Eclipse SUMO sumo Version 1.22.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -8,6 +8,10 @@
         <route-files value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger_mw.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck_mw.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.passenger_mwb.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.truck_mwb.rou.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/extra.rou.xml"/>
         <additional-files value="E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\input_additional.add.xml,E:\SimFox\simulation_api\SimulationConfig\liheyuan\A10KW\A10KW/osm.poly.xml"/>
     </input>
+
+    <output>
+        <tripinfo-output value="tripinfos.xml"/>
+    </output>
 
     <time>
         <end value="1800"/>

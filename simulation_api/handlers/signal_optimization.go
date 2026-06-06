@@ -1,0 +1,981 @@
+package handlers
+
+import (
+	"SumoConfig"
+	"config"
+	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"models"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+type SignalOptimizationMetrics struct {
+	TripCount          int                    `json:"tripCount"`
+	AverageDuration    float64                `json:"averageDuration"`
+	AverageWaitingTime float64                `json:"averageWaitingTime"`
+	AverageTimeLoss    float64                `json:"averageTimeLoss"`
+	CandidateSignals   []SignalCandidateBrief `json:"candidateSignals"`
+}
+
+type SignalCandidateBrief struct {
+	ID          string  `json:"id"`
+	ProgramID   string  `json:"programId"`
+	SourceFile  string  `json:"sourceFile"`
+	PhaseCount  int     `json:"phaseCount"`
+	CycleLength float64 `json:"cycleLength"`
+}
+
+type SignalOptimizationAnalysis struct {
+	Mode                string   `json:"mode"`
+	CongestedJunctions  []string `json:"congestedJunctions"`
+	Reasons             []string `json:"reasons"`
+	RecommendationLevel string   `json:"recommendationLevel"`
+}
+
+type SignalOptimizationProposal struct {
+	Adjustments []SignalAdjustment `json:"adjustments"`
+	NextStep    string             `json:"nextStep"`
+}
+
+type SignalOptimizationComparison struct {
+	BaselineTaskID      uint                            `json:"baselineTaskId"`
+	OptimizedTaskID     uint                            `json:"optimizedTaskId"`
+	OptimizedTaskStatus string                          `json:"optimizedTaskStatus"`
+	BaselineMetrics     SignalOptimizationMetrics       `json:"baselineMetrics"`
+	OptimizedMetrics    *SignalOptimizationMetrics      `json:"optimizedMetrics,omitempty"`
+	Delta               *SignalOptimizationMetricsDelta `json:"delta,omitempty"`
+}
+
+type SignalOptimizationMetricsDelta struct {
+	TripCountDelta                 int     `json:"tripCountDelta"`
+	AverageDurationDelta           float64 `json:"averageDurationDelta"`
+	AverageDurationDeltaPercent    float64 `json:"averageDurationDeltaPercent"`
+	AverageWaitingTimeDelta        float64 `json:"averageWaitingTimeDelta"`
+	AverageWaitingTimeDeltaPercent float64 `json:"averageWaitingTimeDeltaPercent"`
+	AverageTimeLossDelta           float64 `json:"averageTimeLossDelta"`
+	AverageTimeLossDeltaPercent    float64 `json:"averageTimeLossDeltaPercent"`
+}
+
+type SignalAdjustment struct {
+	JunctionID   string              `json:"junctionId"`
+	ProgramID    string              `json:"programId"`
+	SourceFile   string              `json:"sourceFile"`
+	BeforeCycle  float64             `json:"beforeCycle"`
+	AfterCycle   float64             `json:"afterCycle"`
+	PhaseChanges []SignalPhaseChange `json:"phaseChanges"`
+}
+
+type SignalPhaseChange struct {
+	Index       int     `json:"index"`
+	State       string  `json:"state"`
+	OldDuration float64 `json:"oldDuration"`
+	NewDuration float64 `json:"newDuration"`
+	Comment     string  `json:"comment"`
+}
+
+type RejectSignalOptimizationRequest struct {
+	Reason string `json:"reason"`
+}
+
+type additionalSignalFile struct {
+	Path   string
+	Config signalAdditionalConfig
+}
+
+type signalAdditionalConfig struct {
+	XMLName  xml.Name        `xml:"add"`
+	TLLogics []signalTLLogic `xml:"tlLogic"`
+}
+
+type signalNetConfig struct {
+	XMLName  xml.Name        `xml:"net"`
+	TLLogics []signalTLLogic `xml:"tlLogic"`
+}
+
+type signalTLLogic struct {
+	ID        string        `xml:"id,attr"`
+	Type      string        `xml:"type,attr,omitempty"`
+	ProgramID string        `xml:"programID,attr,omitempty"`
+	Offset    string        `xml:"offset,attr,omitempty"`
+	Phases    []signalPhase `xml:"phase"`
+}
+
+type signalPhase struct {
+	Duration string `xml:"duration,attr,omitempty"`
+	MinDur   string `xml:"minDur,attr,omitempty"`
+	MaxDur   string `xml:"maxDur,attr,omitempty"`
+	State    string `xml:"state,attr,omitempty"`
+}
+
+type tripInfosDoc struct {
+	TripInfos []tripInfoRow `xml:"tripinfo"`
+}
+
+type tripInfoRow struct {
+	Duration    float64 `xml:"duration,attr"`
+	WaitingTime float64 `xml:"waitingTime,attr"`
+	TimeLoss    float64 `xml:"timeLoss,attr"`
+}
+
+func GetSignalOptimization(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	taskID, err := strconv.ParseUint(c.Param("taskId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
+		return
+	}
+
+	suggestion, err := loadSignalSuggestion(uint(taskID), user.TenantID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			task, taskErr := loadTaskForSuggestion(uint(taskID), user.TenantID)
+			if taskErr != nil {
+				if errors.Is(taskErr, gorm.ErrRecordNotFound) {
+					c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "load task failed: " + taskErr.Error()})
+				return
+			}
+			if task.Status != "succeeded" {
+				c.JSON(http.StatusNotFound, gin.H{"error": "signal optimization is only available for succeeded tasks"})
+				return
+			}
+			if genErr := generateSignalOptimizationSuggestion(task.ID); genErr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "generate signal optimization suggestion failed: " + genErr.Error()})
+				return
+			}
+			suggestion, err = loadSignalSuggestion(uint(taskID), user.TenantID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "reload signal optimization suggestion failed: " + err.Error()})
+				return
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "load signal optimization suggestion failed: " + err.Error()})
+			return
+		}
+	}
+
+	respondSignalSuggestion(c, suggestion)
+}
+
+func AcceptSignalOptimization(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	taskID, err := strconv.ParseUint(c.Param("taskId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
+		return
+	}
+
+	suggestion, err := loadSignalSuggestion(uint(taskID), user.TenantID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "signal optimization suggestion not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "load signal optimization suggestion failed: " + err.Error()})
+		return
+	}
+
+	task, err := loadTaskForSuggestion(uint(taskID), user.TenantID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "load task failed: " + err.Error()})
+		return
+	}
+
+	appliedFiles, err := applySignalOptimizationSuggestion(suggestion, task)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "apply signal optimization failed: " + err.Error()})
+		return
+	}
+
+	now := time.Now()
+	rerunTaskID := suggestion.RerunTaskID
+	if rerunTaskID == nil {
+		rerunTask, rerunErr := enqueueOptimizationRerun(task, now)
+		if rerunErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "create optimization rerun failed: " + rerunErr.Error()})
+			return
+		}
+		rerunTaskID = &rerunTask.ID
+	}
+	if err := config.DB.Model(&models.SignalOptimizationSuggestion{}).
+		Where("id = ?", suggestion.ID).
+		Updates(map[string]any{
+			"status":              "accepted",
+			"applied_config_path": task.Config.ConfigPath,
+			"applied_signal_file": strings.Join(appliedFiles, ","),
+			"rerun_task_id":       rerunTaskID,
+			"reviewed_at":         &now,
+			"updated_at":          now,
+			"rejected_reason":     "",
+		}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update suggestion status failed: " + err.Error()})
+		return
+	}
+
+	updated, err := loadSignalSuggestion(uint(taskID), user.TenantID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "reload suggestion failed: " + err.Error()})
+		return
+	}
+	respondSignalSuggestion(c, updated)
+}
+
+func RejectSignalOptimization(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+
+	taskID, err := strconv.ParseUint(c.Param("taskId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
+		return
+	}
+
+	suggestion, err := loadSignalSuggestion(uint(taskID), user.TenantID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "signal optimization suggestion not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "load signal optimization suggestion failed: " + err.Error()})
+		return
+	}
+
+	var req RejectSignalOptimizationRequest
+	_ = c.ShouldBindJSON(&req)
+
+	now := time.Now()
+	if err := config.DB.Model(&models.SignalOptimizationSuggestion{}).
+		Where("id = ?", suggestion.ID).
+		Updates(map[string]any{
+			"status":          "rejected",
+			"rejected_reason": strings.TrimSpace(req.Reason),
+			"reviewed_at":     &now,
+			"updated_at":      now,
+		}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "reject suggestion failed: " + err.Error()})
+		return
+	}
+
+	updated, err := loadSignalSuggestion(uint(taskID), user.TenantID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "reload suggestion failed: " + err.Error()})
+		return
+	}
+	respondSignalSuggestion(c, updated)
+}
+
+func generateSignalOptimizationSuggestion(taskID uint) error {
+	task, err := loadTaskForSuggestionByID(taskID)
+	if err != nil {
+		return err
+	}
+	if task.Status != "succeeded" {
+		return nil
+	}
+
+	files, err := discoverSignalFiles(filepath.Dir(task.Config.ConfigPath))
+	if err != nil {
+		return err
+	}
+
+	metrics := buildSignalMetrics(task, files)
+	analysis := buildSignalAnalysis(metrics)
+	proposal := buildSignalProposal(files)
+	summary := buildSignalSummary(metrics, analysis, proposal)
+	engine := "heuristic"
+
+	llmAnalysis, llmProposal, llmSummary, llmEngine, llmErr := generateSignalSuggestionWithLLM(metrics, analysis, proposal)
+	if llmErr == nil {
+		analysis = llmAnalysis
+		proposal = llmProposal
+		if strings.TrimSpace(llmSummary) != "" {
+			summary = llmSummary
+		}
+		if strings.TrimSpace(llmEngine) != "" {
+			engine = llmEngine
+		}
+	} else {
+		fmt.Printf("signal optimization LLM fallback for task %d: %v\n", task.ID, llmErr)
+	}
+
+	metricsJSON, err := json.Marshal(metrics)
+	if err != nil {
+		return err
+	}
+	analysisJSON, err := json.Marshal(analysis)
+	if err != nil {
+		return err
+	}
+	proposalJSON, err := json.Marshal(proposal)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	record := models.SignalOptimizationSuggestion{
+		TaskID:             task.ID,
+		ProjectID:          task.ProjectID,
+		TenantID:           task.Project.TenantID,
+		Status:             "pending",
+		Engine:             engine,
+		Summary:            summary,
+		MetricsJSON:        string(metricsJSON),
+		AnalysisJSON:       string(analysisJSON),
+		ProposalJSON:       string(proposalJSON),
+		ProposedConfigPath: task.Config.ConfigPath,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+
+	return config.DB.Where("task_id = ?", task.ID).
+		Assign(record).
+		FirstOrCreate(&record).Error
+}
+
+func loadSignalSuggestion(taskID uint, tenantID uint) (models.SignalOptimizationSuggestion, error) {
+	var suggestion models.SignalOptimizationSuggestion
+	err := config.DB.
+		Where("task_id = ? AND tenant_id = ?", taskID, tenantID).
+		First(&suggestion).Error
+	return suggestion, err
+}
+
+func loadTaskForSuggestion(taskID uint, tenantID uint) (models.SimulationTask, error) {
+	var task models.SimulationTask
+	err := config.DB.
+		Joins("Project").
+		Where("simulation_tasks.id = ? AND Project.tenant_id = ?", taskID, tenantID).
+		Preload("Config").
+		Preload("Project").
+		First(&task).Error
+	return task, err
+}
+
+func loadTaskForSuggestionByID(taskID uint) (models.SimulationTask, error) {
+	var task models.SimulationTask
+	err := config.DB.
+		Preload("Config").
+		Preload("Project").
+		First(&task, taskID).Error
+	return task, err
+}
+
+func enqueueOptimizationRerun(task models.SimulationTask, now time.Time) (models.SimulationTask, error) {
+	rerunTask := buildQueuedTaskFromPrevious(task, now)
+	if err := config.DB.Create(&rerunTask).Error; err != nil {
+		return models.SimulationTask{}, err
+	}
+
+	_ = config.DB.Model(&models.SimulationProject{}).
+		Where("id = ?", task.ProjectID).
+		Updates(map[string]any{
+			"status":    "queued",
+			"update_at": now,
+		}).Error
+
+	return rerunTask, nil
+}
+
+func respondSignalSuggestion(c *gin.Context, suggestion models.SignalOptimizationSuggestion) {
+	metrics, analysis, proposal := decodeSignalSuggestionPayload(suggestion)
+	rerunTaskStatus, comparison := loadSuggestionComparison(suggestion, metrics)
+
+	c.JSON(http.StatusOK, gin.H{
+		"taskId":             suggestion.TaskID,
+		"projectId":          suggestion.ProjectID,
+		"rerunTaskId":        suggestion.RerunTaskID,
+		"rerunTaskStatus":    rerunTaskStatus,
+		"status":             suggestion.Status,
+		"engine":             suggestion.Engine,
+		"summary":            suggestion.Summary,
+		"metrics":            metrics,
+		"analysis":           analysis,
+		"proposal":           proposal,
+		"comparison":         comparison,
+		"proposedConfigPath": suggestion.ProposedConfigPath,
+		"appliedConfigPath":  suggestion.AppliedConfigPath,
+		"appliedSignalFile":  suggestion.AppliedSignalFile,
+		"rejectedReason":     suggestion.RejectedReason,
+		"createdAt":          suggestion.CreatedAt,
+		"updatedAt":          suggestion.UpdatedAt,
+		"reviewedAt":         suggestion.ReviewedAt,
+	})
+}
+
+func decodeSignalSuggestionPayload(suggestion models.SignalOptimizationSuggestion) (SignalOptimizationMetrics, SignalOptimizationAnalysis, SignalOptimizationProposal) {
+	var metrics SignalOptimizationMetrics
+	var analysis SignalOptimizationAnalysis
+	var proposal SignalOptimizationProposal
+
+	_ = json.Unmarshal([]byte(suggestion.MetricsJSON), &metrics)
+	_ = json.Unmarshal([]byte(suggestion.AnalysisJSON), &analysis)
+	_ = json.Unmarshal([]byte(suggestion.ProposalJSON), &proposal)
+	return metrics, analysis, proposal
+}
+
+func loadSuggestionComparison(suggestion models.SignalOptimizationSuggestion, baselineMetrics SignalOptimizationMetrics) (string, *SignalOptimizationComparison) {
+	if suggestion.RerunTaskID == nil {
+		return "", nil
+	}
+
+	var rerunTask models.SimulationTask
+	if err := config.DB.Select("id", "status").First(&rerunTask, *suggestion.RerunTaskID).Error; err != nil {
+		return "", nil
+	}
+
+	comparison := &SignalOptimizationComparison{
+		BaselineTaskID:      suggestion.TaskID,
+		OptimizedTaskID:     rerunTask.ID,
+		OptimizedTaskStatus: rerunTask.Status,
+		BaselineMetrics:     baselineMetrics,
+	}
+
+	if rerunTask.Status != "succeeded" {
+		return rerunTask.Status, comparison
+	}
+
+	rerunSuggestion, err := ensureSignalSuggestionForTask(rerunTask.ID)
+	if err != nil {
+		return rerunTask.Status, comparison
+	}
+
+	optimizedMetrics, _, _ := decodeSignalSuggestionPayload(rerunSuggestion)
+	comparison.OptimizedMetrics = &optimizedMetrics
+	comparison.Delta = buildSignalMetricsDelta(baselineMetrics, optimizedMetrics)
+	return rerunTask.Status, comparison
+}
+
+func ensureSignalSuggestionForTask(taskID uint) (models.SignalOptimizationSuggestion, error) {
+	var suggestion models.SignalOptimizationSuggestion
+	err := config.DB.Where("task_id = ?", taskID).First(&suggestion).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if genErr := generateSignalOptimizationSuggestion(taskID); genErr != nil {
+			return models.SignalOptimizationSuggestion{}, genErr
+		}
+		err = config.DB.Where("task_id = ?", taskID).First(&suggestion).Error
+	}
+	return suggestion, err
+}
+
+func buildSignalMetricsDelta(baseline SignalOptimizationMetrics, optimized SignalOptimizationMetrics) *SignalOptimizationMetricsDelta {
+	return &SignalOptimizationMetricsDelta{
+		TripCountDelta:                 optimized.TripCount - baseline.TripCount,
+		AverageDurationDelta:           round2(optimized.AverageDuration - baseline.AverageDuration),
+		AverageDurationDeltaPercent:    percentDelta(baseline.AverageDuration, optimized.AverageDuration),
+		AverageWaitingTimeDelta:        round2(optimized.AverageWaitingTime - baseline.AverageWaitingTime),
+		AverageWaitingTimeDeltaPercent: percentDelta(baseline.AverageWaitingTime, optimized.AverageWaitingTime),
+		AverageTimeLossDelta:           round2(optimized.AverageTimeLoss - baseline.AverageTimeLoss),
+		AverageTimeLossDeltaPercent:    percentDelta(baseline.AverageTimeLoss, optimized.AverageTimeLoss),
+	}
+}
+
+func percentDelta(before float64, after float64) float64 {
+	if before == 0 {
+		return 0
+	}
+	return round2(((after - before) / before) * 100)
+}
+
+func buildSignalMetrics(task models.SimulationTask, files []additionalSignalFile) SignalOptimizationMetrics {
+	tripCount, avgDuration, avgWaiting, avgTimeLoss := loadTripMetrics(task)
+
+	candidates := make([]SignalCandidateBrief, 0, len(files))
+	for _, file := range files {
+		for _, logic := range file.Config.TLLogics {
+			candidates = append(candidates, SignalCandidateBrief{
+				ID:          logic.ID,
+				ProgramID:   logic.ProgramID,
+				SourceFile:  file.Path,
+				PhaseCount:  len(logic.Phases),
+				CycleLength: tlCycleLength(logic),
+			})
+		}
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].CycleLength == candidates[j].CycleLength {
+			return candidates[i].ID < candidates[j].ID
+		}
+		return candidates[i].CycleLength > candidates[j].CycleLength
+	})
+
+	return SignalOptimizationMetrics{
+		TripCount:          tripCount,
+		AverageDuration:    round2(avgDuration),
+		AverageWaitingTime: round2(avgWaiting),
+		AverageTimeLoss:    round2(avgTimeLoss),
+		CandidateSignals:   candidates,
+	}
+}
+
+func buildSignalAnalysis(metrics SignalOptimizationMetrics) SignalOptimizationAnalysis {
+	junctions := make([]string, 0, 2)
+	for _, candidate := range metrics.CandidateSignals {
+		junctions = append(junctions, candidate.ID)
+		if len(junctions) == 2 {
+			break
+		}
+	}
+
+	reasons := make([]string, 0, 3)
+	if metrics.TripCount > 0 {
+		reasons = append(reasons, fmt.Sprintf("本轮仿真共统计到 %d 条 tripinfo 记录。", metrics.TripCount))
+	}
+	if metrics.AverageWaitingTime > 0 {
+		reasons = append(reasons, fmt.Sprintf("平均等待时间约 %.2f 秒，适合优先检查主信号配时。", metrics.AverageWaitingTime))
+	}
+	if len(metrics.CandidateSignals) > 0 {
+		reasons = append(reasons, "当前建议优先处理周期较长的路口，先做小幅主绿增配，降低一次性改动风险。")
+	}
+	if len(reasons) == 0 {
+		reasons = append(reasons, "未发现结构化输出指标，当前建议由信号相位结构启发式生成。")
+	}
+
+	level := "review"
+	if metrics.AverageWaitingTime >= 20 {
+		level = "high"
+	} else if metrics.AverageWaitingTime >= 8 {
+		level = "medium"
+	}
+
+	return SignalOptimizationAnalysis{
+		Mode:                "heuristic",
+		CongestedJunctions:  junctions,
+		Reasons:             reasons,
+		RecommendationLevel: level,
+	}
+}
+
+func buildSignalProposal(files []additionalSignalFile) SignalOptimizationProposal {
+	adjustments := make([]SignalAdjustment, 0, 4)
+	for _, file := range files {
+		for _, logic := range file.Config.TLLogics {
+			if len(adjustments) >= 2 {
+				break
+			}
+			changeSet := proposePhaseChanges(logic)
+			if len(changeSet.PhaseChanges) == 0 {
+				continue
+			}
+			changeSet.SourceFile = file.Path
+			adjustments = append(adjustments, changeSet)
+		}
+		if len(adjustments) >= 2 {
+			break
+		}
+	}
+
+	nextStep := "用户确认后将把建议写入新的红绿灯附加文件，并更新 sumocfg 的 additional-files 引用。"
+	if len(adjustments) == 0 {
+		nextStep = "未找到可调整的 tlLogic 文件，建议直接打开路网编辑器手动修改。"
+	}
+
+	return SignalOptimizationProposal{
+		Adjustments: adjustments,
+		NextStep:    nextStep,
+	}
+}
+
+func buildSignalSummary(metrics SignalOptimizationMetrics, analysis SignalOptimizationAnalysis, proposal SignalOptimizationProposal) string {
+	if len(proposal.Adjustments) == 0 {
+		return "未发现可直接写回的红绿灯方案，建议查看路网编辑器进行人工调整。"
+	}
+
+	targets := strings.Join(analysis.CongestedJunctions, ", ")
+	if targets == "" {
+		targets = proposal.Adjustments[0].JunctionID
+	}
+
+	if metrics.TripCount > 0 {
+		return fmt.Sprintf(
+			"基于仿真输出与信号相位结构，建议优先优化路口 %s。当前平均等待 %.2f 秒，先做小幅主绿延长，等待用户确认后写回配置。",
+			targets,
+			metrics.AverageWaitingTime,
+		)
+	}
+
+	return fmt.Sprintf(
+		"当前暂无结构化拥堵指标，已根据信号相位结构为路口 %s 生成保守调优建议，建议用户确认后再重跑仿真验证。",
+		targets,
+	)
+}
+
+func discoverSignalFiles(projectRoot string) ([]additionalSignalFile, error) {
+	files := make([]additionalSignalFile, 0, 4)
+	err := filepath.Walk(projectRoot, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if info.IsDir() || !strings.HasSuffix(strings.ToLower(info.Name()), ".xml") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+
+		var cfg signalAdditionalConfig
+		if err := xml.Unmarshal(content, &cfg); err == nil && len(cfg.TLLogics) > 0 {
+			files = append(files, additionalSignalFile{
+				Path:   path,
+				Config: cfg,
+			})
+			return nil
+		}
+
+		var netCfg signalNetConfig
+		if err := xml.Unmarshal(content, &netCfg); err == nil && len(netCfg.TLLogics) > 0 {
+			files = append(files, additionalSignalFile{
+				Path: path,
+				Config: signalAdditionalConfig{
+					TLLogics: netCfg.TLLogics,
+				},
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Path < files[j].Path
+	})
+	return files, nil
+}
+
+func loadTripMetrics(task models.SimulationTask) (int, float64, float64, float64) {
+	candidates := make([]string, 0, 3)
+	projectRoot := filepath.Dir(task.Config.ConfigPath)
+	candidates = append(candidates, filepath.Join(projectRoot, "tripinfos.xml"))
+	if task.LogURL != "" {
+		candidates = append(candidates, filepath.Join(filepath.Dir(task.LogURL), "tripinfos.xml"))
+	}
+
+	for _, tripFile := range candidates {
+		content, err := os.ReadFile(tripFile)
+		if err != nil {
+			continue
+		}
+
+		var doc tripInfosDoc
+		if err := xml.Unmarshal(content, &doc); err != nil {
+			continue
+		}
+		if len(doc.TripInfos) == 0 {
+			continue
+		}
+
+		var durationSum float64
+		var waitingSum float64
+		var timeLossSum float64
+		for _, trip := range doc.TripInfos {
+			durationSum += trip.Duration
+			waitingSum += trip.WaitingTime
+			timeLossSum += trip.TimeLoss
+		}
+
+		count := len(doc.TripInfos)
+		return count, durationSum / float64(count), waitingSum / float64(count), timeLossSum / float64(count)
+	}
+
+	return 0, 0, 0, 0
+}
+
+func proposePhaseChanges(logic signalTLLogic) SignalAdjustment {
+	changes := make([]SignalPhaseChange, 0, len(logic.Phases))
+	beforeCycle := tlCycleLength(logic)
+	afterCycle := beforeCycle
+
+	for index, phase := range logic.Phases {
+		current := parseDuration(phase.Duration)
+		if current <= 0 {
+			continue
+		}
+
+		greenCount := strings.Count(phase.State, "G") + strings.Count(phase.State, "g")
+		redCount := strings.Count(phase.State, "r")
+		newDuration := current
+		comment := ""
+
+		switch {
+		case greenCount >= 2 && current >= 8:
+			newDuration = current + 5
+			comment = "延长主绿灯，优先释放主方向排队车辆。"
+		case greenCount == 0 && redCount >= 2 && current > 4:
+			newDuration = current - 2
+			if newDuration < 3 {
+				newDuration = 3
+			}
+			comment = "适度压缩全红或次要等待阶段，保持安全裕度。"
+		}
+
+		if newDuration == current {
+			continue
+		}
+
+		changes = append(changes, SignalPhaseChange{
+			Index:       index,
+			State:       phase.State,
+			OldDuration: round2(current),
+			NewDuration: round2(newDuration),
+			Comment:     comment,
+		})
+		afterCycle += newDuration - current
+	}
+
+	return SignalAdjustment{
+		JunctionID:   logic.ID,
+		ProgramID:    logic.ProgramID,
+		BeforeCycle:  round2(beforeCycle),
+		AfterCycle:   round2(afterCycle),
+		PhaseChanges: changes,
+	}
+}
+
+func tlCycleLength(logic signalTLLogic) float64 {
+	var total float64
+	for _, phase := range logic.Phases {
+		total += parseDuration(phase.Duration)
+	}
+	return round2(total)
+}
+
+func applySignalOptimizationSuggestion(suggestion models.SignalOptimizationSuggestion, task models.SimulationTask) ([]string, error) {
+	var proposal SignalOptimizationProposal
+	if err := json.Unmarshal([]byte(suggestion.ProposalJSON), &proposal); err != nil {
+		return nil, err
+	}
+	if len(proposal.Adjustments) == 0 {
+		return nil, fmt.Errorf("no signal adjustments available")
+	}
+
+	grouped := make(map[string][]SignalAdjustment)
+	for _, adjustment := range proposal.Adjustments {
+		grouped[adjustment.SourceFile] = append(grouped[adjustment.SourceFile], adjustment)
+	}
+
+	configDir := filepath.Dir(task.Config.ConfigPath)
+	replacements := make(map[string]string)
+	additions := make([]string, 0, len(grouped))
+	appliedFiles := make([]string, 0, len(grouped))
+	index := 0
+
+	for sourceFile, adjustments := range grouped {
+		content, err := os.ReadFile(sourceFile)
+		if err != nil {
+			return nil, err
+		}
+
+		adjustmentsByID := make(map[string]SignalAdjustment)
+		for _, adjustment := range adjustments {
+			adjustmentsByID[adjustment.JunctionID] = adjustment
+		}
+
+		index += 1
+		targetName := fmt.Sprintf("ai_signal_task_%d_%d_%s", task.ID, index, filepath.Base(sourceFile))
+		targetPath := filepath.Join(filepath.Dir(sourceFile), targetName)
+		targetCfg, appendOnly, err := buildAdjustedSignalConfig(content, adjustmentsByID)
+		if err != nil {
+			return nil, err
+		}
+		output, err := xml.MarshalIndent(targetCfg, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(targetPath, append([]byte(xml.Header), output...), 0o644); err != nil {
+			return nil, err
+		}
+
+		sourceRel, err := filepath.Rel(configDir, sourceFile)
+		if err != nil {
+			sourceRel = filepath.Base(sourceFile)
+		}
+		targetRel, err := filepath.Rel(configDir, targetPath)
+		if err != nil {
+			targetRel = filepath.Base(targetPath)
+		}
+
+		if appendOnly {
+			additions = append(additions, normalizeUploadPath(targetRel))
+		} else {
+			replacements[normalizeUploadPath(sourceRel)] = normalizeUploadPath(targetRel)
+		}
+		appliedFiles = append(appliedFiles, targetPath)
+	}
+
+	if err := updateSignalAdditionalFiles(task.Config.ConfigPath, replacements, additions); err != nil {
+		return nil, err
+	}
+
+	sort.Strings(appliedFiles)
+	return appliedFiles, nil
+}
+
+func buildAdjustedSignalConfig(content []byte, adjustmentsByID map[string]SignalAdjustment) (signalAdditionalConfig, bool, error) {
+	var cfg signalAdditionalConfig
+	if err := xml.Unmarshal(content, &cfg); err == nil && len(cfg.TLLogics) > 0 {
+		for logicIndex, logic := range cfg.TLLogics {
+			adjustment, ok := adjustmentsByID[logic.ID]
+			if !ok {
+				continue
+			}
+			for _, change := range adjustment.PhaseChanges {
+				if change.Index < 0 || change.Index >= len(logic.Phases) {
+					continue
+				}
+				cfg.TLLogics[logicIndex].Phases[change.Index].Duration = formatDuration(change.NewDuration)
+			}
+		}
+		return cfg, false, nil
+	}
+
+	var netCfg signalNetConfig
+	if err := xml.Unmarshal(content, &netCfg); err != nil || len(netCfg.TLLogics) == 0 {
+		if err == nil {
+			err = fmt.Errorf("no tlLogic found in source signal file")
+		}
+		return signalAdditionalConfig{}, false, err
+	}
+
+	overrideCfg := signalAdditionalConfig{
+		TLLogics: make([]signalTLLogic, 0, len(adjustmentsByID)),
+	}
+	for _, logic := range netCfg.TLLogics {
+		adjustment, ok := adjustmentsByID[logic.ID]
+		if !ok {
+			continue
+		}
+		updatedLogic := logic
+		for _, change := range adjustment.PhaseChanges {
+			if change.Index < 0 || change.Index >= len(updatedLogic.Phases) {
+				continue
+			}
+			updatedLogic.Phases[change.Index].Duration = formatDuration(change.NewDuration)
+		}
+		overrideCfg.TLLogics = append(overrideCfg.TLLogics, updatedLogic)
+	}
+	if len(overrideCfg.TLLogics) == 0 {
+		return signalAdditionalConfig{}, false, fmt.Errorf("no matching tlLogic found for proposed adjustments")
+	}
+	return overrideCfg, true, nil
+}
+
+func updateSignalAdditionalFiles(configPath string, replacements map[string]string, additions []string) error {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+
+	var cfg SumoConfig.SumoConfiguration
+	if err := xml.Unmarshal(content, &cfg); err != nil {
+		return err
+	}
+	if cfg.Input == nil {
+		cfg.Input = &SumoConfig.Input{}
+	}
+
+	items := splitReferencedPaths("")
+	if cfg.Input.AdditionalFiles != nil {
+		items = splitReferencedPaths(cfg.Input.AdditionalFiles.Value)
+	}
+
+	seen := make(map[string]struct{}, len(items))
+	updated := make([]string, 0, len(items)+len(replacements)+len(additions))
+	for _, item := range items {
+		mapped, ok := replacements[normalizeUploadPath(item)]
+		if ok {
+			item = mapped
+		}
+		item = normalizeUploadPath(item)
+		if item == "" {
+			continue
+		}
+		if _, exists := seen[item]; exists {
+			continue
+		}
+		seen[item] = struct{}{}
+		updated = append(updated, item)
+	}
+
+	for _, item := range replacements {
+		item = normalizeUploadPath(item)
+		if item == "" {
+			continue
+		}
+		if _, exists := seen[item]; exists {
+			continue
+		}
+		seen[item] = struct{}{}
+		updated = append(updated, item)
+	}
+
+	for _, item := range additions {
+		item = normalizeUploadPath(item)
+		if item == "" {
+			continue
+		}
+		if _, exists := seen[item]; exists {
+			continue
+		}
+		seen[item] = struct{}{}
+		updated = append(updated, item)
+	}
+
+	if cfg.Input.AdditionalFiles == nil {
+		cfg.Input.AdditionalFiles = &SumoConfig.StringAttr{}
+	}
+	cfg.Input.AdditionalFiles.Value = strings.Join(updated, ",")
+
+	output, err := xml.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(configPath, append([]byte(xml.Header), output...), 0o644)
+}
+
+func parseDuration(raw string) float64 {
+	value, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+func formatDuration(value float64) string {
+	return strconv.FormatFloat(value, 'f', 2, 64)
+}
+
+func round2(value float64) float64 {
+	floatValue, _ := strconv.ParseFloat(strconv.FormatFloat(value, 'f', 2, 64), 64)
+	return floatValue
+}

@@ -32,3 +32,5 @@ Thumbs.db
 
 # Local startup overrides
 simfox.local.ps1
+tmp/
+worker-agent/workdir/

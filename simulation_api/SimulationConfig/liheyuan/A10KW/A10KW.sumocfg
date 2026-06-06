@@ -1,39 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<!-- generated on 2024-06-12 18:37:40 by Eclipse SUMO sumo Version v1_20_0+0443-233e48e5c88
--->
-
-<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
-
+<sumoConfiguration xmlns:xsi="" xsi:noNamespaceSchemaLocation="">
     <input>
-        <net-file value="A10KW/osm.net.xml"/>
-        <route-files value="A10KW/osm.passenger.rou.xml,A10KW/osm.truck.rou.xml,A10KW/osm.passenger_mw.rou.xml,A10KW/osm.truck_mw.rou.xml,A10KW/osm.passenger_mwb.rou.xml,A10KW/osm.truck_mwb.rou.xml,A10KW/extra.rou.xml"/>
-        <additional-files value="input_additional.add.xml,A10KW/osm.poly.xml"/>
+        <net-file value="A10KW/osm.net.xml"></net-file>
+        <route-files value="A10KW/osm.passenger.rou.xml,A10KW/osm.truck.rou.xml,A10KW/osm.passenger_mw.rou.xml,A10KW/osm.truck_mw.rou.xml,A10KW/osm.passenger_mwb.rou.xml,A10KW/osm.truck_mwb.rou.xml,A10KW/extra.rou.xml"></route-files>
+        <additional-files value="input_additional.add.xml,A10KW/osm.poly.xml,A10KW/ai_signal_task_28_1_ai_signal_task_27_1_osm.net.xml"></additional-files>
     </input>
-
     <time>
-        <end value="1800"/>
-        <step-length value="0.5"/>
+        <end value="1800"></end>
+        <step-length value="0.5"></step-length>
     </time>
-
     <processing>
-        <ignore-route-errors value="true"/>
-        <time-to-teleport value="0"/>
+        <ignore-route-errors value="true"></ignore-route-errors>
+        <time-to-teleport></time-to-teleport>
     </processing>
-
     <routing>
-        <device.rerouting.adaptation-steps value="180"/>
+        <device.rerouting.adaptation-steps value="180"></device.rerouting.adaptation-steps>
     </routing>
-
     <report>
-        <verbose value="true"/>
-        <xml-validation value="never"/>
-        <duration-log.statistics value="true"/>
-        <no-step-log value="true"/>
+        <verbose value="true"></verbose>
+        <xml-validation value="never"></xml-validation>
+        <duration-log.statistics value="true"></duration-log.statistics>
+        <no-step-log value="true"></no-step-log>
     </report>
-
     <gui_only>
-        <gui-settings-file value="A10KW/osm.view.xml"/>
+        <gui-settings-file value="A10KW/osm.view.xml"></gui-settings-file>
     </gui_only>
-
 </sumoConfiguration>

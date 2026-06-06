@@ -2,10 +2,13 @@ import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electr
 import { dirname, join, basename, extname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promises as fs } from 'node:fs'
+import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 const devServerUrl = process.env.SIMFOX_DESKTOP_URL
 const rendererDistPath = resolve(currentDir, '../../../simulation_manager/dist/index.html')
+const workspaceRoot = resolve(currentDir, '../../../')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -74,6 +77,54 @@ ipcMain.handle('local:read-file', async (_event: unknown, targetPath: string) =>
 
 ipcMain.handle('local:open-path', async (_event: unknown, targetPath: string) => {
   return shell.openPath(targetPath)
+})
+
+ipcMain.handle('local:open-sumo-gui', async (_event: unknown, payload: { configPath: string; projectName: string }) => {
+  const resolvedConfigPath = resolveWorkspaceProjectPath(payload.configPath)
+  await fs.access(resolvedConfigPath)
+  const projectRoot = dirname(resolvedConfigPath)
+  const localRoot = resolve(app.getPath('downloads'), 'SimFox', sanitizeName(payload.projectName || basename(projectRoot)))
+  const timestampedRoot = `${localRoot}-${Date.now()}`
+
+  await fs.mkdir(dirname(timestampedRoot), { recursive: true })
+  await fs.cp(projectRoot, timestampedRoot, { recursive: true, force: true })
+
+  const localConfigPath = resolve(timestampedRoot, basename(resolvedConfigPath))
+  await fs.access(localConfigPath)
+  const sumoGuiExecutable = resolveSumoGuiExecutable()
+
+  const child = spawn(sumoGuiExecutable, ['-c', localConfigPath], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: false,
+  })
+  child.unref()
+
+  return localConfigPath
+})
+
+ipcMain.handle('local:open-netedit', async (_event: unknown, payload: { configPath: string; projectName: string }) => {
+  const resolvedConfigPath = resolveWorkspaceProjectPath(payload.configPath)
+  await fs.access(resolvedConfigPath)
+  const projectRoot = dirname(resolvedConfigPath)
+  const localRoot = resolve(app.getPath('downloads'), 'SimFox', sanitizeName(payload.projectName || basename(projectRoot)))
+  const timestampedRoot = `${localRoot}-netedit-${Date.now()}`
+
+  await fs.mkdir(dirname(timestampedRoot), { recursive: true })
+  await fs.cp(projectRoot, timestampedRoot, { recursive: true, force: true })
+
+  const localConfigPath = resolve(timestampedRoot, basename(resolvedConfigPath))
+  await fs.access(localConfigPath)
+  const neteditExecutable = resolveNeteditExecutable()
+
+  const child = spawn(neteditExecutable, ['--sumocfg-file', localConfigPath], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: false,
+  })
+  child.unref()
+
+  return localConfigPath
 })
 
 ipcMain.handle('local:notify', (_event: unknown, payload: { title: string; body: string }) => {
@@ -157,6 +208,79 @@ function extractDependencies(configText: string): string[] {
     .filter((value, index, array) => value !== '' && array.indexOf(value) === index)
 }
 
+function extractFirstDependency(configText: string, key: string) {
+  const pattern = new RegExp(`<${key}[^>]*value="([^"]+)"[^>]*/?>`, 'i')
+  const match = pattern.exec(configText)
+  if (!match || !match[1]) {
+    return ''
+  }
+  return normalizePath(match[1].split(',')[0] || '')
+}
+
 function normalizePath(value: string) {
   return value.replace(/\\/g, '/').replace(/^\.?\//, '').trim()
+}
+
+function resolveWorkspaceProjectPath(targetPath: string) {
+  const rawPath = resolve(targetPath)
+  const candidates = [
+    rawPath,
+    resolve(workspaceRoot, targetPath),
+    resolve(workspaceRoot, 'simulation_api', targetPath),
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = resolve(candidate)
+    if (existsSync(normalized)) {
+      return normalized
+    }
+  }
+
+  return rawPath
+}
+
+function sanitizeName(value: string) {
+  return value.replace(/[<>:"/\\|?*]+/g, '-').trim() || 'project'
+}
+
+function resolveSumoGuiExecutable() {
+  const candidates = [
+    'sumo-gui',
+    'sumo-gui.exe',
+    'C:/Program Files (x86)/Eclipse/Sumo/bin/sumo-gui.exe',
+    'C:/Program Files/Eclipse/Sumo/bin/sumo-gui.exe',
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate.includes('/') || candidate.includes('\\')) {
+      if (existsSync(candidate)) {
+        return candidate
+      }
+      continue
+    }
+    return candidate
+  }
+
+  return 'sumo-gui'
+}
+
+function resolveNeteditExecutable() {
+  const candidates = [
+    'netedit',
+    'netedit.exe',
+    'C:/Program Files (x86)/Eclipse/Sumo/bin/netedit.exe',
+    'C:/Program Files/Eclipse/Sumo/bin/netedit.exe',
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate.includes('/') || candidate.includes('\\')) {
+      if (existsSync(candidate)) {
+        return candidate
+      }
+      continue
+    }
+    return candidate
+  }
+
+  return 'netedit'
 }

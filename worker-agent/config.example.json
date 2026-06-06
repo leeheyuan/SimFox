@@ -1,7 +1,8 @@
 {
   "platform_url": "http://127.0.0.1:8082",
-  "token": "Bearer replace-me",
+  "worker_id": 1,
   "worker_name": "sim-node-01",
+  "worker_secret": "replace-with-cluster-generated-secret",
   "address": "127.0.0.1",
   "queue_name": "default",
   "labels_json": "{\"region\":\"local\",\"runtime\":\"sumo\"}",

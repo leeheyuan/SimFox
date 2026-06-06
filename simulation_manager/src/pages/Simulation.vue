@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { cancelTask, listTasks, retryTask, type TaskListItem } from '@/api/simulation'
 
@@ -114,6 +114,7 @@ const tasks = ref<TaskListItem[]>([])
 const showLogsDialog = ref(false)
 const selectedTask = ref<TaskListItem | null>(null)
 const canOpenLogPath = computed(() => Boolean(selectedTask.value?.logUrl && window.simfox?.openPath))
+let refreshTimer: number | null = null
 
 const rows = computed(() =>
   tasks.value.map((task) => ({
@@ -151,17 +152,33 @@ const stats = computed(() => {
 
 onMounted(async () => {
   await refreshTasks()
+  refreshTimer = window.setInterval(() => {
+    void refreshTasks(true)
+  }, 3000)
 })
 
-async function refreshTasks() {
-  loading.value = true
+onBeforeUnmount(() => {
+  if (refreshTimer !== null) {
+    window.clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+})
+
+async function refreshTasks(isBackground = false) {
+  if (!isBackground) {
+    loading.value = true
+  }
   try {
     const data = await listTasks()
     tasks.value = data.tasks ?? []
   } catch (_error) {
-    ElMessage.error('Failed to load tasks')
+    if (!isBackground) {
+      ElMessage.error('Failed to load tasks')
+    }
   } finally {
-    loading.value = false
+    if (!isBackground) {
+      loading.value = false
+    }
   }
 }
 

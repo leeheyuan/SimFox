@@ -19,14 +19,14 @@ def parse_args() -> argparse.Namespace:
 class WorkerAgent:
     def __init__(self, config: WorkerConfig):
         self.config = config
-        self.client = ApiClient(config.platform_url, config.token)
+        self.client = ApiClient(config.platform_url)
         self.worker_id: int | None = None
         self.running_tasks = 0
         self.running_lock = threading.Lock()
 
     def run(self) -> None:
         self.config.work_dir.mkdir(parents=True, exist_ok=True)
-        self.worker_id = self.register()
+        self.authenticate()
         heartbeat_thread = threading.Thread(target=self.heartbeat_loop, daemon=True)
         heartbeat_thread.start()
 
@@ -50,24 +50,30 @@ class WorkerAgent:
             worker_thread.start()
             time.sleep(1)
 
-    def register(self) -> int:
+    def authenticate(self) -> int:
         response = self.client.post(
-            "/worker/register",
+            "/worker/auth",
             {
+                "workerId": self.config.worker_id,
                 "name": self.config.worker_name,
+                "secret": self.config.worker_secret,
                 "address": self.config.address,
                 "queueName": self.config.queue_name,
                 "labelsJson": self.config.labels_json,
                 "maxConcurrency": self.config.max_concurrency,
             },
         )
-        worker_id = int(response["workerId"])
-        return worker_id
+        token = str(response["token"]).strip()
+        if not token:
+            raise RuntimeError("worker auth response did not include a token")
+        self.client.set_token(token)
+        self.worker_id = int(response["workerId"])
+        return self.worker_id
 
     def heartbeat_loop(self) -> None:
         while True:
             try:
-                self.client.post(
+                self.post_with_reauth(
                     f"/worker/{self.worker_id}/heartbeat",
                     {
                         "status": "online" if self.current_running_tasks() == 0 else "busy",
@@ -80,7 +86,7 @@ class WorkerAgent:
 
     def claim_task(self) -> dict | None:
         try:
-            response = self.client.post(f"/worker/{self.worker_id}/tasks/next", {}, allow_no_content=True)
+            response = self.post_with_reauth(f"/worker/{self.worker_id}/tasks/next", {}, allow_no_content=True)
         except RuntimeError as exc:
             if "404" in str(exc):
                 return None
@@ -110,13 +116,13 @@ class WorkerAgent:
                 progress_callback=lambda progress: self.report_progress(task_id, progress),
             )
             if result.ok:
-                self.client.post(
+                self.post_with_reauth(
                     f"/worker/{self.worker_id}/tasks/{task_id}/complete",
                     {"logUrl": result.log_path},
                 )
                 print(f"task {task_id} completed")
             else:
-                self.client.post(
+                self.post_with_reauth(
                     f"/worker/{self.worker_id}/tasks/{task_id}/fail",
                     {"error": result.error or "sumo failed", "logUrl": result.log_path},
                 )
@@ -124,7 +130,7 @@ class WorkerAgent:
         except Exception as exc:  # noqa: BLE001
             message = str(exc)
             try:
-                self.client.post(
+                self.post_with_reauth(
                     f"/worker/{self.worker_id}/tasks/{task_id}/fail",
                     {"error": message, "logUrl": ""},
                 )
@@ -144,12 +150,22 @@ class WorkerAgent:
 
     def report_progress(self, task_id: int, progress: int) -> None:
         try:
-            self.client.post(
+            self.post_with_reauth(
                 f"/worker/{self.worker_id}/tasks/{task_id}/progress",
                 {"progress": progress},
             )
         except Exception as exc:  # noqa: BLE001
             print(f"progress update failed for task {task_id}: {exc}")
+
+    def post_with_reauth(self, path: str, payload: dict | None = None, allow_no_content: bool = False):
+        try:
+            return self.client.post(path, payload, allow_no_content=allow_no_content)
+        except RuntimeError as exc:
+            if "401" not in str(exc):
+                raise
+            print("worker token expired or invalid, re-authenticating")
+            self.authenticate()
+            return self.client.post(path, payload, allow_no_content=allow_no_content)
 
 
 def resolve_config_path(task: dict, workspace_root: Path) -> Path:

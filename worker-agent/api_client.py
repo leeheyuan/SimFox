@@ -6,7 +6,7 @@ from urllib import error, request
 
 
 class ApiClient:
-    def __init__(self, base_url: str, token: str):
+    def __init__(self, base_url: str, token: str = ""):
         self.base_url = base_url.rstrip("/")
         self.token = token
 
@@ -16,6 +16,9 @@ class ApiClient:
     def get(self, path: str) -> Any:
         return self._request("GET", path, None)
 
+    def set_token(self, token: str) -> None:
+        self.token = token.strip()
+
     def _request(
         self,
         method: str,
@@ -24,10 +27,9 @@ class ApiClient:
         allow_no_content: bool = False,
     ) -> Any:
         body = None
-        headers = {
-            "Authorization": self.token,
-            "Accept": "application/json",
-        }
+        headers = {"Accept": "application/json"}
+        if self.token:
+            headers["Authorization"] = self.token
         if payload is not None:
             body = json.dumps(payload).encode("utf-8")
             headers["Content-Type"] = "application/json"

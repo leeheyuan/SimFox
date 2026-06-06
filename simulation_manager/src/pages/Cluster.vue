@@ -37,32 +37,56 @@
       <el-table-column prop="lastHeartbeat" label="Last Heartbeat" width="180" />
     </el-table>
 
-    <el-dialog v-model="showRegisterDialog" title="Register Worker" width="480px">
-      <el-form label-position="top" @submit.prevent>
-        <el-form-item label="Worker Name" required>
-          <el-input v-model="registerForm.name" placeholder="worker-a" />
-        </el-form-item>
-        <el-form-item label="Address">
-          <el-input v-model="registerForm.address" placeholder="10.0.0.12" />
-        </el-form-item>
-        <el-form-item label="Queue Name">
-          <el-input v-model="registerForm.queueName" placeholder="default" />
-        </el-form-item>
-        <el-form-item label="Max Concurrency">
-          <el-input-number v-model="registerForm.maxConcurrency" :min="1" :max="64" />
-        </el-form-item>
-        <el-form-item label="Labels JSON">
-          <el-input
-            v-model="registerForm.labelsJson"
-            type="textarea"
-            :rows="4"
-            placeholder='{"region":"cn-east","runtime":"sumo"}'
-          />
-        </el-form-item>
-      </el-form>
+    <el-dialog v-model="showRegisterDialog" :title="registerDialogTitle" width="640px">
+      <template v-if="!showIssuedWorkerDetails">
+        <el-form label-position="top" @submit.prevent>
+          <el-form-item label="Worker Name" required>
+            <el-input v-model="registerForm.name" placeholder="worker-a" />
+          </el-form-item>
+          <el-form-item label="Address">
+            <el-input v-model="registerForm.address" placeholder="10.0.0.12" />
+          </el-form-item>
+          <el-form-item label="Queue Name">
+            <el-input v-model="registerForm.queueName" placeholder="default" />
+          </el-form-item>
+          <el-form-item label="Max Concurrency">
+            <el-input-number v-model="registerForm.maxConcurrency" :min="1" :max="64" />
+          </el-form-item>
+          <el-form-item label="Labels JSON">
+            <el-input
+              v-model="registerForm.labelsJson"
+              type="textarea"
+              :rows="4"
+              placeholder='{"region":"cn-east","runtime":"sumo"}'
+            />
+          </el-form-item>
+        </el-form>
+      </template>
+      <template v-else>
+        <p class="secret-help">
+          Save this secret now. It is only shown at registration time and should be placed on the remote worker host.
+        </p>
+        <el-form label-position="top">
+          <el-form-item label="Worker ID">
+            <el-input :model-value="String(issuedWorker.id || '')" readonly />
+          </el-form-item>
+          <el-form-item label="Worker Name">
+            <el-input :model-value="issuedWorker.name" readonly />
+          </el-form-item>
+          <el-form-item label="Worker Secret">
+            <el-input :model-value="issuedWorker.secret" type="textarea" :rows="3" readonly />
+          </el-form-item>
+          <el-form-item label="Remote Config Template">
+            <el-input :model-value="workerConfigTemplate" type="textarea" :rows="12" readonly />
+          </el-form-item>
+        </el-form>
+      </template>
       <template #footer>
-        <el-button @click="resetRegisterDialog">Cancel</el-button>
-        <el-button type="primary" :loading="registering" @click="handleRegisterWorker">Register</el-button>
+        <el-button v-if="!showIssuedWorkerDetails" @click="resetRegisterDialog">Cancel</el-button>
+        <el-button v-if="!showIssuedWorkerDetails" type="primary" :loading="registering" @click="handleRegisterWorker">Register</el-button>
+        <el-button v-if="showIssuedWorkerDetails" @click="copyWorkerConfig">Copy Config</el-button>
+        <el-button v-if="showIssuedWorkerDetails" @click="startAnotherWorker">Register Another</el-button>
+        <el-button v-if="showIssuedWorkerDetails" type="primary" @click="closeRegisterDialog">Close</el-button>
       </template>
     </el-dialog>
   </section>
@@ -71,6 +95,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { resolveApiBase } from '@/api/base'
 import {
   listTasks,
   listWorkers,
@@ -84,6 +109,15 @@ const registering = ref(false)
 const showRegisterDialog = ref(false)
 const workers = ref<WorkerListItem[]>([])
 const tasks = ref<TaskListItem[]>([])
+const issuedWorker = ref({
+  id: 0,
+  name: '',
+  secret: '',
+  address: '',
+  queueName: 'default',
+  labelsJson: '',
+  maxConcurrency: 1,
+})
 const registerForm = ref({
   name: '',
   address: '',
@@ -115,6 +149,31 @@ const stats = computed(() => {
     queuedTasks,
   }
 })
+
+const showIssuedWorkerDetails = computed(() => Boolean(issuedWorker.value.id && issuedWorker.value.secret))
+const registerDialogTitle = computed(() => (showIssuedWorkerDetails.value ? 'Worker Credential' : 'Register Worker'))
+
+const workerConfigTemplate = computed(() =>
+  JSON.stringify(
+    {
+      platform_url: resolveApiBase('/simulation-api'),
+      worker_id: issuedWorker.value.id || 1,
+      worker_name: issuedWorker.value.name || 'sim-node-01',
+      worker_secret: issuedWorker.value.secret || 'replace-with-cluster-generated-secret',
+      address: issuedWorker.value.address || '127.0.0.1',
+      queue_name: issuedWorker.value.queueName || 'default',
+      labels_json: issuedWorker.value.labelsJson || '{"region":"local","runtime":"sumo"}',
+      max_concurrency: issuedWorker.value.maxConcurrency || 1,
+      sumo_bin: 'sumo',
+      workspace_root: '/opt/simfox',
+      work_dir: '/opt/simfox/worker-agent/workdir',
+      poll_interval_sec: 3,
+      heartbeat_interval_sec: 10,
+    },
+    null,
+    2,
+  ),
+)
 
 onMounted(async () => {
   await refreshCluster()
@@ -150,15 +209,23 @@ async function handleRegisterWorker() {
 
   registering.value = true
   try {
-    await registerWorker({
+    const response = await registerWorker({
       name: registerForm.value.name.trim(),
       address: registerForm.value.address.trim(),
       queueName: registerForm.value.queueName.trim() || 'default',
       labelsJson: registerForm.value.labelsJson.trim(),
       maxConcurrency: registerForm.value.maxConcurrency,
     })
-    ElMessage.success('Worker registered successfully')
-    resetRegisterDialog()
+    issuedWorker.value = {
+      id: response.workerId,
+      name: registerForm.value.name.trim(),
+      secret: response.workerSecret,
+      address: registerForm.value.address.trim() || '127.0.0.1',
+      queueName: registerForm.value.queueName.trim() || 'default',
+      labelsJson: registerForm.value.labelsJson.trim(),
+      maxConcurrency: registerForm.value.maxConcurrency,
+    }
+    ElMessage.success('Worker credential created successfully')
     await refreshCluster()
   } catch (_error) {
     ElMessage.error('Failed to register worker')
@@ -167,8 +234,25 @@ async function handleRegisterWorker() {
   }
 }
 
+async function copyWorkerConfig() {
+  try {
+    await navigator.clipboard.writeText(workerConfigTemplate.value)
+    ElMessage.success('Worker config copied')
+  } catch (_error) {
+    ElMessage.error('Failed to copy worker config')
+  }
+}
+
 function resetRegisterDialog() {
-  showRegisterDialog.value = false
+  issuedWorker.value = {
+    id: 0,
+    name: '',
+    secret: '',
+    address: '',
+    queueName: 'default',
+    labelsJson: '',
+    maxConcurrency: 1,
+  }
   registerForm.value = {
     name: '',
     address: '',
@@ -176,6 +260,15 @@ function resetRegisterDialog() {
     labelsJson: '',
     maxConcurrency: 1,
   }
+}
+
+function closeRegisterDialog() {
+  showRegisterDialog.value = false
+  resetRegisterDialog()
+}
+
+function startAnotherWorker() {
+  resetRegisterDialog()
 }
 
 function formatDate(value?: string | null) {
@@ -228,6 +321,11 @@ h2 {
 
 p {
   margin: 0;
+  color: #64748b;
+}
+
+.secret-help {
+  margin: 0 0 16px;
   color: #64748b;
 }
 </style>

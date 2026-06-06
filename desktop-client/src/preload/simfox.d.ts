@@ -22,6 +22,8 @@ declare global {
       pickProjectFiles: () => Promise<SimfoxProjectBundle | null>
       readFileBytes: (targetPath: string) => Promise<number[]>
       openPath: (targetPath: string) => Promise<string>
+      openInSumoGui: (configPath: string, projectName: string) => Promise<string>
+      openInNetedit: (configPath: string, projectName: string) => Promise<string>
       notify: (title: string, body: string) => Promise<void>
       versions: {
         electron: string

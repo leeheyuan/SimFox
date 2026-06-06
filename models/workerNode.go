@@ -6,6 +6,7 @@ type WorkerNode struct {
 	ID             uint       `gorm:"primaryKey"`
 	TenantID       uint       `gorm:"not null;index"`
 	Name           string     `gorm:"size:120;not null;index"`
+	SecretHash     string     `gorm:"size:255"`
 	Status         string     `gorm:"size:30;not null;index"` // online, busy, draining, offline
 	Address        string     `gorm:"size:255"`
 	QueueName      string     `gorm:"size:80;index"`

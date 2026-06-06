@@ -6,6 +6,10 @@ contextBridge.exposeInMainWorld('simfox', {
   pickProjectFiles: () => ipcRenderer.invoke('local:pick-project-files'),
   readFileBytes: (targetPath: string) => ipcRenderer.invoke('local:read-file', targetPath),
   openPath: (targetPath: string) => ipcRenderer.invoke('local:open-path', targetPath),
+  openInSumoGui: (configPath: string, projectName: string) =>
+    ipcRenderer.invoke('local:open-sumo-gui', { configPath, projectName }),
+  openInNetedit: (configPath: string, projectName: string) =>
+    ipcRenderer.invoke('local:open-netedit', { configPath, projectName }),
   notify: (title: string, body: string) => ipcRenderer.invoke('local:notify', { title, body }),
   versions: {
     electron: process.versions.electron,

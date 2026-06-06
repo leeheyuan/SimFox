@@ -4,7 +4,7 @@
 
 It replaces the old `sim_server` WebSocket-oriented runner with a background worker that:
 
-- registers itself with the SimFox platform
+- authenticates with a machine-level worker secret
 - sends periodic heartbeats
 - claims queued simulation tasks
 - runs SUMO locally
@@ -17,6 +17,8 @@ Create a config file from the example:
 ```powershell
 Copy-Item E:\SimFox\worker-agent\config.example.json E:\SimFox\worker-agent\config.local.json
 ```
+
+Then ask the platform to create a worker credential from the Cluster page or the `/worker/register` API, and place the returned `worker_id`, `worker_name`, and `worker_secret` into the config file.
 
 Then run:
 
@@ -47,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File E:\SimFox\worker-agent\stop-windows.ps1
 ## Current assumptions
 
 - the worker can reach `simulation_api`
-- the worker has a valid bearer token
+- the worker has a valid `worker_name` and `worker_secret`
 - task `Config.ConfigPath` points to a path visible from the worker host
 - SUMO is installed locally and available as `sumo` or the configured `sumo_bin`
 
